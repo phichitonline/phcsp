@@ -1,0 +1,16 @@
+.git
+.env
+node_modules
+vendor
+storage/framework/cache
+storage/framework/sessions
+storage/framework/views
+storage/logs
+public/build
+public/hot
+public/storage
+hosinfo_v2_production.zip
+.gemini
+docker-compose.yml
+Dockerfile
+.dockerignore
