@@ -72,4 +72,12 @@ class StudentProfile extends Model
     {
         return trim("{$this->first_name_en} {$this->last_name_en}");
     }
+
+    /**
+     * Relationship: StudentProfile has many CourseGrades
+     */
+    public function courseGrades()
+    {
+        return $this->hasMany(StudentCourseGrade::class, 'student_profile_id');
+    }
 }

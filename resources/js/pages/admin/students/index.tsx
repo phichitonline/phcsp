@@ -683,6 +683,15 @@ const StudentManagementPage = ({
                                                             <IconifyIcon icon="solar:folder-with-files-bold" className="fs-16" />
                                                         </Link>
 
+                                                        {/* ปุ่มดูความก้าวหน้าหน่วยกิต ป.โท */}
+                                                        <Link
+                                                            href={`/credits/student/${student.id}`}
+                                                            className="btn btn-sm btn-soft-success btn-icon"
+                                                            title="ดูความก้าวหน้าหน่วยกิต / Transcript"
+                                                        >
+                                                            <IconifyIcon icon="solar:diploma-bold" className="fs-16" />
+                                                        </Link>
+
                                                         {/* ปุ่มดูรายละเอียดสรุป / เช็คลิสต์เอกสาร */}
                                                         <Button
                                                             variant="soft-info"

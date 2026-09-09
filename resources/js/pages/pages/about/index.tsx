@@ -18,12 +18,10 @@ const AboutPage = () => {
                         <Card className="shadow-sm border-0">
                             <CardBody className="p-5">
                                 <div className="text-center mb-5">
-                                    <div className="mx-auto mb-4">
-                                        <img src={logoDark} alt="HOSinfo Logo" style={{ height: '250px', width: 'auto', objectFit: 'contain' }} />
-                                    </div>
+
                                     {/* <h2 className="fw-bold text-dark mb-3">เกี่ยวกับระบบ HOS-info</h2> */}
                                     <p className="text-muted fs-16 mx-auto" style={{ maxWidth: '600px' }}>
-                                        ระบบบริหารจัดการข้อมูลสารสนเทศและตัวชี้วัดโรงพยาบาล (HOS-info) ถูกพัฒนาขึ้นเพื่อใช้ในการติดตาม วิเคราะห์ และประเมินผลการดำเนินงานของโรงพยาบาล
+                                        ระบบทะเบียนนักศึกษา วิทยาลัยการสาธารณสุขสิรินธร จังหวัดสุพรรณบุรี
                                     </p>
                                 </div>
 

@@ -76,4 +76,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(PersonalDocument::class);
     }
+
+    /**
+     * Relationship: User has many CourseGrades
+     */
+    public function courseGrades()
+    {
+        return $this->hasMany(StudentCourseGrade::class, 'user_id');
+    }
 }

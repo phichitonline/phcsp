@@ -26,6 +26,7 @@ use App\Http\Controllers\PersonalDocumentController;
 use App\Http\Controllers\StandardDocumentController;
 use App\Http\Controllers\StudentProfileController;
 use App\Http\Controllers\StudentManagementController;
+use App\Http\Controllers\CreditTrackingController;
 use Inertia\Inertia;
 
 require __DIR__.'/auth.php';
@@ -65,6 +66,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/student-profile', [StudentProfileController::class, 'index'])->name('student-profile.index');
     Route::post('/student-profile', [StudentProfileController::class, 'update'])->name('student-profile.update');
     Route::get('/student-profile/search', [StudentProfileController::class, 'search'])->name('student-profile.search');
+
+    // ระบบติดตามหน่วยกิต ป.โท (Credit Tracking)
+    Route::get('/credits', [CreditTrackingController::class, 'overview'])->name('credits.index');
+    Route::get('/credits/student/{id?}', [CreditTrackingController::class, 'studentCredit'])->name('credits.student');
+    Route::get('/credits/entry', [CreditTrackingController::class, 'gradeEntry'])->name('credits.entry');
+    Route::post('/credits/save-student-grades', [CreditTrackingController::class, 'saveStudentGrades'])->name('credits.save-student-grades');
+    Route::post('/credits/save-batch-grades', [CreditTrackingController::class, 'saveBatchGrades'])->name('credits.save-batch-grades');
+    Route::get('/credits/curriculum', [CreditTrackingController::class, 'curriculumIndex'])->name('credits.curriculum');
+    Route::post('/credits/courses', [CreditTrackingController::class, 'storeCourse'])->name('credits.courses.store');
+    Route::delete('/credits/courses/{id}', [CreditTrackingController::class, 'destroyCourse'])->name('credits.courses.destroy');
 
     // กระดานข่าวถามตอบและแจ้งปัญหา (Q&A Webboard)
     Route::post('/webboard/store', [WebboardController::class, 'store'])->name('webboard.store');

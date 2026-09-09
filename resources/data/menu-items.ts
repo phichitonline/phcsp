@@ -30,6 +30,12 @@ export const MENU_ITEMS: MenuItemType[] = [
         icon: 'tabler:id-badge-2',
         url: '/personal-documents',
     },
+    {
+        key: 'my_credits',
+        label: 'ความก้าวหน้าหน่วยกิต',
+        icon: 'tabler:certificate',
+        url: '/credits/student',
+    },
 
     {
         key: 'management',
@@ -42,6 +48,27 @@ export const MENU_ITEMS: MenuItemType[] = [
         label: 'รายชื่อนักศึกษา',
         icon: 'tabler:school',
         url: '/admin/students',
+        roles: ['admin'],
+    },
+    {
+        key: 'credits_overview',
+        label: 'ภาพรวมหน่วยกิต ป.โท',
+        icon: 'tabler:chart-bar',
+        url: '/credits',
+        roles: ['admin'],
+    },
+    {
+        key: 'grade_entry',
+        label: 'กรอกผลการเรียน/เกรด',
+        icon: 'tabler:edit',
+        url: '/credits/entry',
+        roles: ['admin'],
+    },
+    {
+        key: 'curriculum',
+        label: 'โครงสร้างหลักสูตร',
+        icon: 'tabler:books',
+        url: '/credits/curriculum',
         roles: ['admin'],
     },
     {
