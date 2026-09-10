@@ -110,7 +110,7 @@ const UsersPage = ({ users }: Props) => {
                                     name: 'อีเมล',
                                 },
                                 {
-                                    name: 'หน่วยงาน/แผนก',
+                                    name: 'ประเภท',
                                 },
                                 {
                                     name: 'บทบาท (Role)',

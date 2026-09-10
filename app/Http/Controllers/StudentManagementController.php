@@ -32,7 +32,7 @@ class StudentManagementController extends Controller
 
         $thesisCategories = ThesisCategory::orderBy('category_no', 'asc')->get();
 
-        // ดึงผู้ใช้งานที่เป็นนักศึกษา (role = 'user' หรือมี studentProfile หรือผู้ใช้ทั้งหมดที่ไม่ใช่ admin)
+        // ดึงเฉพาะผู้ใช้งานที่มีประเภท (Department) เป็น "นักศึกษา" เท่านั้น
         $usersQuery = User::with([
             'studentProfile',
             'department',
@@ -40,9 +40,8 @@ class StudentManagementController extends Controller
                 $q->orderBy('item_no', 'asc');
             },
         ])
-        ->where(function ($q) {
-            $q->where('role', '!=', 'admin')
-              ->orWhereHas('studentProfile');
+        ->whereHas('department', function ($q) {
+            $q->where('dp_name', 'นักศึกษา');
         })
         ->orderBy('id', 'asc');
 

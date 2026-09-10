@@ -83,12 +83,12 @@ const CreateUserPage = () => {
                                     </Col>
 
                                     <Col md={6}>
-                                        <label className="form-label">หน่วยงาน/แผนก</label>
+                                        <label className="form-label">ประเภท</label>
                                         <Select
                                             classNamePrefix="react-select"
                                             options={deptOptions}
                                             onChange={(opt: any) => setData('department_id', opt ? opt.value : '')}
-                                            placeholder="ค้นหาหรือเลือกหน่วยงาน..."
+                                            placeholder="ค้นหาหรือเลือกประเภท..."
                                             isClearable
                                         />
                                         {errors.department_id && <div className="text-danger fs-13 mt-1">{errors.department_id}</div>}

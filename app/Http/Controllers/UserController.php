@@ -90,7 +90,7 @@ class UserController extends Controller
             'is_active' => 'required|boolean',
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
@@ -98,6 +98,43 @@ class UserController extends Controller
             'department_id' => $request->department_id,
             'is_active' => $request->is_active,
         ]);
+
+        // หากเลือกประเภทเป็น "นักศึกษา" ให้สร้างข้อมูลลงในทะเบียนนักศึกษา (StudentProfile) โดยอัตโนมัติ
+        if ($request->department_id) {
+            $department = Department::find($request->department_id);
+            if ($department && trim($department->dp_name) === 'นักศึกษา') {
+                $nameParts = explode(' ', trim($request->name), 2);
+                $firstName = $nameParts[0] ?? $request->name;
+                $lastName = $nameParts[1] ?? '';
+
+                // ตัดคำนำหน้าถ้ามี
+                $titlePrefix = 'นาย';
+                if (str_starts_with($firstName, 'นางสาว') || str_starts_with($firstName, 'น.ส.')) {
+                    $titlePrefix = 'นางสาว';
+                } elseif (str_starts_with($firstName, 'นาง')) {
+                    $titlePrefix = 'นาง';
+                } elseif (str_starts_with($firstName, 'นาย')) {
+                    $titlePrefix = 'นาย';
+                }
+
+                \App\Models\StudentProfile::firstOrCreate(
+                    ['user_id' => $user->id],
+                    [
+                        'student_code' => '68' . str_pad($user->id, 5, '0', STR_PAD_LEFT) . '1',
+                        'national_id' => $user->pid ?? null,
+                        'title_prefix' => $titlePrefix,
+                        'first_name_th' => $firstName,
+                        'last_name_th' => $lastName,
+                        'gender' => in_array($titlePrefix, ['นางสาว', 'นาง']) ? 'หญิง' : 'ชาย',
+                        'faculty' => 'วิทยาลัยการสาธารณสุขสิรินธร จังหวัดสุพรรณบุรี',
+                        'major' => 'สาธารณสุขศาสตรมหาบัณฑิต',
+                        'academic_year' => '2568',
+                        'class_year' => 'ชั้นปีที่ 1',
+                        'student_status' => 'กำลังศึกษา',
+                    ]
+                );
+            }
+        }
 
         return redirect()->route('users.index')->with('success', 'เพิ่มผู้ใช้สำเร็จ');
     }
@@ -171,6 +208,42 @@ class UserController extends Controller
         }
 
         $user->update($data);
+
+        // หาก Admin อัปเดตประเภทเป็น "นักศึกษา" ให้สร้าง StudentProfile หากยังไม่มี
+        if ($currentUser->role === 'admin' && $request->department_id) {
+            $department = Department::find($request->department_id);
+            if ($department && trim($department->dp_name) === 'นักศึกษา') {
+                $nameParts = explode(' ', trim($request->name), 2);
+                $firstName = $nameParts[0] ?? $request->name;
+                $lastName = $nameParts[1] ?? '';
+
+                $titlePrefix = 'นาย';
+                if (str_starts_with($firstName, 'นางสาว') || str_starts_with($firstName, 'น.ส.')) {
+                    $titlePrefix = 'นางสาว';
+                } elseif (str_starts_with($firstName, 'นาง')) {
+                    $titlePrefix = 'นาง';
+                } elseif (str_starts_with($firstName, 'นาย')) {
+                    $titlePrefix = 'นาย';
+                }
+
+                \App\Models\StudentProfile::firstOrCreate(
+                    ['user_id' => $user->id],
+                    [
+                        'student_code' => '68' . str_pad($user->id, 5, '0', STR_PAD_LEFT) . '1',
+                        'national_id' => $user->pid ?? null,
+                        'title_prefix' => $titlePrefix,
+                        'first_name_th' => $firstName,
+                        'last_name_th' => $lastName,
+                        'gender' => in_array($titlePrefix, ['นางสาว', 'นาง']) ? 'หญิง' : 'ชาย',
+                        'faculty' => 'วิทยาลัยการสาธารณสุขสิรินธร จังหวัดสุพรรณบุรี',
+                        'major' => 'สาธารณสุขศาสตรมหาบัณฑิต',
+                        'academic_year' => '2568',
+                        'class_year' => 'ชั้นปีที่ 1',
+                        'student_status' => 'กำลังศึกษา',
+                    ]
+                );
+            }
+        }
 
         if ($currentUser->role === 'admin') {
             return redirect()->route('users.index')->with('success', 'แก้ไขข้อมูลผู้ใช้สำเร็จ');

@@ -99,13 +99,13 @@ const EditUserPage = ({ user, departments }: Props) => {
                                     </Col>
 
                                     <Col md={6}>
-                                        <label className="form-label">หน่วยงาน/แผนก</label>
+                                        <label className="form-label">ประเภท</label>
                                         <Select
                                             classNamePrefix="react-select"
                                             options={deptOptions}
                                             defaultValue={deptOptions.find(opt => opt.value === user.department_id)}
                                             onChange={(opt: any) => setData('department_id', opt ? opt.value : '')}
-                                            placeholder="ค้นหาหรือเลือกหน่วยงาน..."
+                                            placeholder="ค้นหาหรือเลือกประเภท..."
                                             isClearable={!(isSelf && auth.user?.role !== 'admin')}
                                             isDisabled={isSelf && auth.user?.role !== 'admin'}
                                         />
