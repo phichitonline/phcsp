@@ -7,9 +7,13 @@ import IconifyIcon from '@/components/wrappers/IconifyIcon';
 
 // Import team photos
 import member1Img from '@/images/team/member-1.jpg';
-import member2Img from '@/images/team/member-2.jpg';
+import member2Img from '@/images/team/member-22.jpg';
 import member3Img from '@/images/team/member-3.jpg';
 import member4Img from '@/images/team/member-4.jpg';
+import member5Img from '@/images/team/member-5.jpg';
+import member6Img from '@/images/team/member-6.jpg';
+import member7Img from '@/images/team/member-7.jpg';
+import member8Img from '@/images/team/member-8.jpg';
 
 interface TeamMember {
     id: number;
@@ -26,6 +30,7 @@ interface TeamMember {
 }
 
 const teamMembers: TeamMember[] = [
+    // แถวที่ 1: ฝ่ายบริหารโครงการและสถาปัตยกรรมระบบหลัก (Row 1)
     {
         id: 1,
         name: 'ดร. นภนต์ รัตนศิริพงษ์',
@@ -41,14 +46,14 @@ const teamMembers: TeamMember[] = [
     },
     {
         id: 2,
-        name: 'นายณัฐพงษ์ ครูเทศ',
+        name: 'นายณัฐพงษ์ เครือเทศ',
         englishName: 'Mr. Nathaphong Khruates',
         role: 'หัวหน้าทีมนักพัฒนาระบบ (Lead Full-Stack)',
         badgeColor: 'success',
         organization: 'ทีมพัฒนานวัตกรรมดิจิทัล',
         bio: 'รับผิดชอบสถาปัตยกรรมระบบทั้งฝั่ง Backend (Laravel, MySQL) และ Frontend (Inertia.js, React, TypeScript)',
         email: 'nathaphong.k@phcsuphan.ac.th',
-        phone: '081-234-5678',
+        phone: '064-447-6000',
         image: member2Img,
         skills: ['Laravel', 'React.js', 'MySQL', 'API Design'],
     },
@@ -77,6 +82,59 @@ const teamMembers: TeamMember[] = [
         phone: '086-555-7890',
         image: member4Img,
         skills: ['Linux & DevOps', 'Database Admin', 'Cybersecurity', 'Cloud Infra'],
+    },
+    // แถวที่ 2: ฝ่ายวิชาการและสนับสนุนเทคโนโลยี (Row 2)
+    {
+        id: 5,
+        name: 'ดร. ศศิธร สุวรรณเวช',
+        englishName: 'Dr. Sasithorn Suwanvech',
+        role: 'ผู้เชี่ยวชาญหลักสูตรและวิชาการ',
+        badgeColor: 'purple',
+        organization: 'วสส.สุพรรณบุรี',
+        bio: 'กลั่นกรองโครงสร้างรายวิชา แผนการศึกษา เกณฑ์การสำเร็จการศึกษา และการเทียบโอนหน่วยกิตระดับบัณฑิตศึกษา',
+        email: 'sasithorn.s@phcsuphan.ac.th',
+        phone: '035-500-123 ต่อ 108',
+        image: member5Img,
+        skills: ['Curriculum Design', 'Academic Regulations', 'Educational Quality'],
+    },
+    {
+        id: 6,
+        name: 'นายวรเมธ รัตนเกียรติคุณ',
+        englishName: 'Mr. Worameth Rattanakiattikun',
+        role: 'นักพัฒนาระบบ Backend & API',
+        badgeColor: 'dark',
+        organization: 'ทีมพัฒนานวัตกรรมดิจิทัล',
+        bio: 'พัฒนาระบบ API คำนวณเกรดเฉลี่ยสะสม (GPAX) เงื่อนไขสอบผ่าน และการเชื่อมโยงฐานข้อมูลนักศึกษา',
+        email: 'worameth.r@phcsuphan.ac.th',
+        phone: '082-345-6789',
+        image: member6Img,
+        skills: ['Laravel REST API', 'Query Optimization', 'Authentication', 'PHP'],
+    },
+    {
+        id: 7,
+        name: 'นางสาวณิชาภา ประเสริฐสุข',
+        englishName: 'Ms. Nichapa Prasertsuk',
+        role: 'วิศวกรตรวจสอบคุณภาพระบบ (QA Engineer)',
+        badgeColor: 'danger',
+        organization: 'ทีมประกันคุณภาพซอฟต์แวร์',
+        bio: 'ทดสอบการทำงานของระบบ (Functional & Security Test) ตรวจสอบเงื่อนไขปุ่มอัปโหลด และรายงานจุดบกพร่อง',
+        email: 'nichapa.p@phcsuphan.ac.th',
+        phone: '084-567-8901',
+        image: member7Img,
+        skills: ['Software Testing', 'Test Automation', 'Bug Tracking', 'Security QA'],
+    },
+    {
+        id: 8,
+        name: 'นายธราดล พงษ์ศิริ',
+        englishName: 'Mr. Tharadol Pongsiri',
+        role: 'เจ้าหน้าที่สนับสนุนผู้ใช้และฝึกอบรม (IT Support)',
+        badgeColor: 'secondary',
+        organization: 'ฝ่ายสนับสนุนเทคโนโลยีสารสนเทศ',
+        bio: 'ให้คำปรึกษา แนะนำการใช้งาน จัดทำคู่มืออบรมนักศึกษาและคณาจารย์ พร้อมประสานงานแก้ไขปัญหาเร่งด่วน',
+        email: 'tharadol.p@phcsuphan.ac.th',
+        phone: '083-999-1122',
+        image: member8Img,
+        skills: ['User Support', 'Training & Manual', 'Troubleshooting', 'Customer Service'],
     },
 ];
 
@@ -120,9 +178,13 @@ const ContactUsPage = () => {
                     </p>
                 </div>
 
-                {/* Team Members Grid (4 Columns) */}
+                {/* แถวที่ 1: ทีมบริหารโครงการและสถาปัตยกรรมระบบ (Row 1) */}
+                <div className="d-flex align-items-center mb-3">
+                    <span className="badge bg-primary px-2 py-1 rounded-pill me-2 fs-12">แถวที่ 1</span>
+                    <h5 className="fw-bold text-dark mb-0 fs-16">ฝ่ายบริหารโครงการ สถาปัตยกรรมระบบ และโครงสร้างพื้นฐาน</h5>
+                </div>
                 <Row className="g-4 mb-5 justify-content-center">
-                    {teamMembers.map((member) => (
+                    {teamMembers.slice(0, 4).map((member) => (
                         <Col key={member.id} xl={3} lg={6} md={6} sm={12}>
                             <Card className="h-100 border-0 shadow-sm rounded-4 text-center overflow-hidden position-relative">
                                 {/* Top colored accent banner */}
@@ -130,6 +192,91 @@ const ContactUsPage = () => {
                                     style={{
                                         height: '90px',
                                         background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+                                    }}
+                                />
+
+                                <CardBody className="pt-0 px-4 pb-4">
+                                    {/* Member Avatar */}
+                                    <div
+                                        className="position-relative d-inline-block mx-auto"
+                                        style={{ marginTop: '-55px', marginBottom: '16px' }}
+                                    >
+                                        <img
+                                            src={member.image}
+                                            alt={member.name}
+                                            className="rounded-circle img-thumbnail shadow"
+                                            style={{
+                                                width: '110px',
+                                                height: '110px',
+                                                objectFit: 'cover',
+                                                border: '4px solid #fff',
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* Name & English */}
+                                    <h5 className="fw-bold text-dark mb-1 fs-16">{member.name}</h5>
+                                    <p className="text-muted fs-12 mb-2">{member.englishName}</p>
+
+                                    {/* Role Badge */}
+                                    <div className="mb-3">
+                                        <Badge bg={member.badgeColor} className="px-2 py-1 rounded-pill fw-normal fs-12">
+                                            {member.role}
+                                        </Badge>
+                                    </div>
+
+                                    {/* Bio */}
+                                    <p className="text-muted fs-13 mb-3 text-start" style={{ minHeight: '60px' }}>
+                                        {member.bio}
+                                    </p>
+
+                                    {/* Skills tags */}
+                                    <div className="d-flex flex-wrap gap-1 justify-content-center mb-3">
+                                        {member.skills.map((skill, sIdx) => (
+                                            <span
+                                                key={sIdx}
+                                                className="badge bg-light text-secondary border fs-11 px-2 py-1 rounded-pill"
+                                            >
+                                                {skill}
+                                            </span>
+                                        ))}
+                                    </div>
+
+                                    <hr className="my-3 opacity-25" />
+
+                                    {/* Contact Details */}
+                                    <div className="text-start fs-12 text-muted">
+                                        <div className="d-flex align-items-center mb-2">
+                                            <IconifyIcon icon="solar:letter-bold-duotone" className="text-primary me-2 fs-16 flex-shrink-0" />
+                                            <a href={`mailto:${member.email}`} className="text-truncate text-decoration-none text-muted hover-primary">
+                                                {member.email}
+                                            </a>
+                                        </div>
+                                        <div className="d-flex align-items-center">
+                                            <IconifyIcon icon="solar:phone-calling-rounded-bold-duotone" className="text-success me-2 fs-16 flex-shrink-0" />
+                                            <span>{member.phone}</span>
+                                        </div>
+                                    </div>
+                                </CardBody>
+                            </Card>
+                        </Col>
+                    ))}
+                </Row>
+
+                {/* แถวที่ 2: ฝ่ายวิชาการ ทดสอบระบบ และสนับสนุนผู้ใช้งาน (Row 2) */}
+                <div className="d-flex align-items-center mb-3">
+                    <span className="badge bg-success px-2 py-1 rounded-pill me-2 fs-12">แถวที่ 2</span>
+                    <h5 className="fw-bold text-dark mb-0 fs-16">ฝ่ายวิชาการหลักสูตร พัฒนา API ทดสอบระบบ และสนับสนุนผู้ใช้งาน</h5>
+                </div>
+                <Row className="g-4 mb-5 justify-content-center">
+                    {teamMembers.slice(4, 8).map((member) => (
+                        <Col key={member.id} xl={3} lg={6} md={6} sm={12}>
+                            <Card className="h-100 border-0 shadow-sm rounded-4 text-center overflow-hidden position-relative">
+                                {/* Top colored accent banner */}
+                                <div
+                                    style={{
+                                        height: '90px',
+                                        background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
                                     }}
                                 />
 
