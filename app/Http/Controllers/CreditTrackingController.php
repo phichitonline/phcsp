@@ -623,4 +623,67 @@ class CreditTrackingController extends Controller
 
         return redirect()->back()->with('success', 'ลบรายวิชาเรียบร้อยแล้ว');
     }
+
+    /**
+     * เพิ่มหรือแก้ไขหลักสูตร / สาขาวิชา
+     */
+    public function storeCurriculum(Request $request)
+    {
+        $currentUser = auth()->user();
+        if (!$currentUser || $currentUser->role !== 'admin') {
+            abort(403, 'เฉพาะผู้ดูแลระบบเท่านั้น');
+        }
+
+        $request->validate([
+            'code' => 'required|string|max:50',
+            'name' => 'required|string|max:255',
+            'degree_level' => 'required|string|max:50',
+            'total_credits' => 'required|integer|min:1',
+            'core_credits_required' => 'required|integer|min:0',
+            'elective_credits_required' => 'required|integer|min:0',
+            'thesis_credits_required' => 'required|integer|min:0',
+            'min_gpa_graduate' => 'required|numeric|between:0,4.00',
+            'academic_year_start' => 'nullable|string|max:10',
+            'description' => 'nullable|string|max:1000',
+        ]);
+
+        Curriculum::updateOrCreate(
+            ['id' => $request->id],
+            [
+                'code' => strtoupper(trim($request->code)),
+                'name' => trim($request->name),
+                'degree_level' => $request->degree_level,
+                'total_credits' => (int)$request->total_credits,
+                'core_credits_required' => (int)$request->core_credits_required,
+                'elective_credits_required' => (int)$request->elective_credits_required,
+                'thesis_credits_required' => (int)$request->thesis_credits_required,
+                'min_gpa_graduate' => (float)$request->min_gpa_graduate,
+                'academic_year_start' => $request->academic_year_start ? trim($request->academic_year_start) : null,
+                'description' => $request->description ? trim($request->description) : null,
+                'is_active' => $request->boolean('is_active', true),
+            ]
+        );
+
+        return redirect()->back()->with('success', 'บันทึกข้อมูลหลักสูตร / สาขาวิชาเรียบร้อยแล้ว');
+    }
+
+    /**
+     * ลบหลักสูตร / สาขาวิชา
+     */
+    public function destroyCurriculum($id)
+    {
+        $currentUser = auth()->user();
+        if (!$currentUser || $currentUser->role !== 'admin') {
+            abort(403, 'เฉพาะผู้ดูแลระบบเท่านั้น');
+        }
+
+        $curriculum = Curriculum::withCount('courses')->findOrFail($id);
+        if ($curriculum->courses_count > 0) {
+            return redirect()->back()->with('error', 'ไม่สามารถลบได้ เนื่องจากมีรายวิชาผูกอยู่กับหลักสูตรนี้ (' . $curriculum->courses_count . ' วิชา)');
+        }
+
+        $curriculum->delete();
+
+        return redirect()->back()->with('success', 'ลบหลักสูตรเรียบร้อยแล้ว');
+    }
 }

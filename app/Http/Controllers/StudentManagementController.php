@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Curriculum;
 use App\Models\PersonalDocument;
 use App\Models\StandardDocument;
 use App\Models\StudentProfile;
@@ -218,6 +219,7 @@ class StudentManagementController extends Controller
             'students' => $students->values(),
             'standard_documents' => $standardDocuments,
             'thesis_categories' => $thesisCategories,
+            'curriculums' => Curriculum::where('is_active', true)->orderBy('id', 'asc')->get(),
             'stats' => [
                 'total_students' => $totalStudents,
                 'profiles_updated' => $profilesUpdatedCount,

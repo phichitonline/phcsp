@@ -113,6 +113,13 @@ export interface ThesisCategoryItem {
     item_reference?: string | null;
 }
 
+export interface CurriculumOption {
+    id: number;
+    code: string;
+    name: string;
+    degree_level?: string | null;
+}
+
 interface Props {
     students: StudentItem[];
     standard_documents: StandardDocumentItem[];
@@ -129,6 +136,7 @@ interface Props {
         doc_status?: string;
         class_year?: string;
     };
+    curriculums?: CurriculumOption[];
 }
 
 const StudentManagementPage = ({
@@ -142,6 +150,7 @@ const StudentManagementPage = ({
         documents_in_progress: 0,
     },
     filters = {},
+    curriculums = [],
 }: Props) => {
     // Search and Filter State
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
@@ -884,12 +893,32 @@ const StudentManagementPage = ({
 
                                         <Col md={6}>
                                             <Form.Group controlId="editMajor">
-                                                <Form.Label className="fs-13 fw-semibold text-dark">สาขาวิชา</Form.Label>
-                                                <Form.Control
-                                                    type="text"
+                                                <Form.Label className="fs-13 fw-semibold text-dark">สาขาวิชา / หลักสูตร</Form.Label>
+                                                <Form.Select
                                                     value={formData.major || ''}
                                                     onChange={(e) => setFormData({ ...formData, major: e.target.value })}
-                                                />
+                                                >
+                                                    <option value="">-- เลือกสาขาวิชา / หลักสูตร --</option>
+                                                    {curriculums && curriculums.length > 0 ? (
+                                                        curriculums.map((c) => (
+                                                            <option key={c.id} value={c.name}>
+                                                                {c.code ? `[${c.code}] ` : ''}{c.name}
+                                                            </option>
+                                                        ))
+                                                    ) : (
+                                                        <>
+                                                            <option value="หลักสูตรสาธารณสุขศาสตรมหาบัณฑิต (ส.ม.)">หลักสูตรสาธารณสุขศาสตรมหาบัณฑิต (ส.ม.)</option>
+                                                            <option value="สาธารณสุขศาสตรบัณฑิต (สาธารณสุขชุมชน)">สาธารณสุขศาสตรบัณฑิต (สาธารณสุขชุมชน)</option>
+                                                            <option value="สาธารณสุขศาสตรบัณฑิต (ทันตสาธารณสุข)">สาธารณสุขศาสตรบัณฑิต (ทันตสาธารณสุข)</option>
+                                                            <option value="การแพทย์แผนไทยบัณฑิต">การแพทย์แผนไทยบัณฑิต</option>
+                                                        </>
+                                                    )}
+                                                    {formData.major &&
+                                                        (!curriculums || !curriculums.some(c => c.name === formData.major)) &&
+                                                        !["หลักสูตรสาธารณสุขศาสตรมหาบัณฑิต (ส.ม.)", "สาธารณสุขศาสตรบัณฑิต (สาธารณสุขชุมชน)", "สาธารณสุขศาสตรบัณฑิต (ทันตสาธารณสุข)", "การแพทย์แผนไทยบัณฑิต"].includes(formData.major) && (
+                                                            <option value={formData.major}>{formData.major}</option>
+                                                    )}
+                                                </Form.Select>
                                             </Form.Group>
                                         </Col>
 

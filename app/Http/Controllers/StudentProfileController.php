@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Curriculum;
 use App\Models\PersonalDocument;
 use App\Models\StandardDocument;
 use App\Models\StudentProfile;
@@ -82,6 +83,8 @@ class StudentProfileController extends Controller
                 ->get();
         }
 
+        $curriculums = Curriculum::where('is_active', true)->orderBy('id', 'asc')->get();
+
         return Inertia::render('student-profile/index', [
             'student_profile' => $profile,
             'profile_user' => $targetUser,
@@ -90,6 +93,7 @@ class StudentProfileController extends Controller
             'personal_documents' => $personalDocs,
             'standard_documents' => $standardDocs,
             'all_students' => $allStudents,
+            'curriculums' => $curriculums,
         ]);
     }
 

@@ -53,10 +53,139 @@ interface Props {
 }
 
 const CurriculumManagementPage: React.FC<Props> = ({ curriculums, is_admin }) => {
-    const activeCurriculum = curriculums[0] || null;
+    const [selectedCurriculumId, setSelectedCurriculumId] = useState<number>(curriculums[0]?.id || 1);
+    const activeCurriculum = curriculums.find((c) => c.id === selectedCurriculumId) || curriculums[0] || null;
+
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [showModal, setShowModal] = useState(false);
     const [editingCourse, setEditingCourse] = useState<CourseItem | null>(null);
+
+    // Curriculum Add/Edit state
+    const [showCurriculumModal, setShowCurriculumModal] = useState(false);
+    const [editingCurriculum, setEditingCurriculum] = useState<CurriculumItem | null>(null);
+    const [curriculumFormData, setCurriculumFormData] = useState({
+        code: '',
+        name: '',
+        degree_level: 'ปริญญาโท',
+        total_credits: 36,
+        core_credits_required: 15,
+        elective_credits_required: 9,
+        thesis_credits_required: 12,
+        min_gpa_graduate: 3.00,
+        academic_year_start: '2566',
+        description: '',
+        is_active: true,
+    });
+
+    const handleOpenAddCurriculumModal = () => {
+        setEditingCurriculum(null);
+        setCurriculumFormData({
+            code: '',
+            name: '',
+            degree_level: 'ปริญญาโท',
+            total_credits: 36,
+            core_credits_required: 15,
+            elective_credits_required: 9,
+            thesis_credits_required: 12,
+            min_gpa_graduate: 3.00,
+            academic_year_start: '2567',
+            description: '',
+            is_active: true,
+        });
+        setShowCurriculumModal(true);
+    };
+
+    const handleOpenEditCurriculumModal = (curriculum: CurriculumItem) => {
+        setEditingCurriculum(curriculum);
+        setCurriculumFormData({
+            code: curriculum.code,
+            name: curriculum.name,
+            degree_level: curriculum.degree_level,
+            total_credits: curriculum.total_credits,
+            core_credits_required: curriculum.core_credits_required,
+            elective_credits_required: curriculum.elective_credits_required,
+            thesis_credits_required: curriculum.thesis_credits_required,
+            min_gpa_graduate: curriculum.min_gpa_graduate,
+            academic_year_start: curriculum.academic_year_start || '',
+            description: curriculum.description || '',
+            is_active: true,
+        });
+        setShowCurriculumModal(true);
+    };
+
+    const handleCurriculumSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        router.post(
+            '/credits/curriculum',
+            {
+                id: editingCurriculum?.id,
+                ...curriculumFormData,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setShowCurriculumModal(false);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'บันทึกสำเร็จ!',
+                        text: editingCurriculum ? 'แก้ไขข้อมูลหลักสูตรเรียบร้อยแล้ว' : 'เพิ่มหลักสูตรใหม่เรียบร้อยแล้ว',
+                        timer: 2000,
+                        showConfirmButton: false,
+                    });
+                },
+                onError: (err) => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'เกิดข้อผิดพลาด',
+                        text: Object.values(err)[0] || 'ไม่สามารถบันทึกข้อมูลหลักสูตรได้',
+                    });
+                },
+            }
+        );
+    };
+
+    const handleDeleteCurriculum = (curriculum: CurriculumItem) => {
+        if (curriculum.courses && curriculum.courses.length > 0) {
+            Swal.fire({
+                icon: 'error',
+                title: 'ไม่สามารถลบได้',
+                text: `หลักสูตรนี้มีรายวิชาผูกอยู่ ${curriculum.courses.length} วิชา กรุณาลบรายวิชาออกก่อน`,
+            });
+            return;
+        }
+
+        Swal.fire({
+            icon: 'warning',
+            title: 'ยืนยันการลบหลักสูตร?',
+            text: `ต้องการลบหลักสูตร "${curriculum.name}" (${curriculum.code}) หรือไม่?`,
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'ใช่, ต้องการลบ',
+            cancelButtonText: 'ยกเลิก',
+        }).then((res) => {
+            if (res.isConfirmed) {
+                router.delete(`/credits/curriculum/${curriculum.id}`, {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'ลบสำเร็จ!',
+                            timer: 1500,
+                            showConfirmButton: false,
+                        });
+                    },
+                    onError: (err) => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'เกิดข้อผิดพลาด',
+                            text: Object.values(err)[0] || 'ไม่สามารถลบหลักสูตรได้',
+                        });
+                    },
+                });
+            }
+        });
+    };
 
     // Form state for add/edit course
     const [formData, setFormData] = useState({
@@ -184,12 +313,56 @@ const CurriculumManagementPage: React.FC<Props> = ({ curriculums, is_admin }) =>
                 </div>
 
                 {is_admin && (
-                    <Button variant="primary" size="sm" onClick={handleOpenAddModal} className="d-inline-flex align-items-center gap-1 shadow-sm">
-                        <IconifyIcon icon="tabler:plus" className="fs-16" />
-                        <span>เพิ่มรายวิชาใหม่</span>
-                    </Button>
+                    <div className="d-flex align-items-center gap-2">
+                        <Button
+                            variant="outline-primary"
+                            size="sm"
+                            onClick={handleOpenAddCurriculumModal}
+                            className="d-inline-flex align-items-center gap-1 shadow-sm bg-white"
+                        >
+                            <IconifyIcon icon="tabler:folder-plus" className="fs-16" />
+                            <span>เพิ่มหลักสูตรใหม่</span>
+                        </Button>
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={handleOpenAddModal}
+                            className="d-inline-flex align-items-center gap-1 shadow-sm"
+                            disabled={!activeCurriculum}
+                        >
+                            <IconifyIcon icon="tabler:plus" className="fs-16" />
+                            <span>เพิ่มรายวิชาใหม่</span>
+                        </Button>
+                    </div>
                 )}
             </div>
+
+            {/* Curriculum Selection Pills */}
+            {curriculums.length > 0 && (
+                <div className="d-flex align-items-center gap-2 mb-3 overflow-auto pb-1 flex-wrap">
+                    <span className="text-muted fs-13 fw-semibold text-nowrap d-flex align-items-center gap-1">
+                        <IconifyIcon icon="tabler:books" className="fs-16 text-primary" />
+                        หลักสูตร/สาขาวิชา:
+                    </span>
+                    {curriculums.map((curr) => (
+                        <Button
+                            key={curr.id}
+                            variant={curr.id === activeCurriculum?.id ? 'primary' : 'outline-secondary'}
+                            size="sm"
+                            className="rounded-pill d-flex align-items-center gap-1 text-nowrap px-3 shadow-none"
+                            onClick={() => setSelectedCurriculumId(curr.id)}
+                        >
+                            <span>{curr.code ? `[${curr.code}] ` : ''}{curr.name}</span>
+                            <Badge
+                                bg={curr.id === activeCurriculum?.id ? 'light' : 'secondary'}
+                                className={`ms-1 ${curr.id === activeCurriculum?.id ? 'text-primary' : 'text-white'}`}
+                            >
+                                {curr.courses?.length || 0} วิชา
+                            </Badge>
+                        </Button>
+                    ))}
+                </div>
+            )}
 
             {/* Curriculum Info Header Card */}
             {activeCurriculum && (
@@ -203,7 +376,7 @@ const CurriculumManagementPage: React.FC<Props> = ({ curriculums, is_admin }) =>
                                         รหัส {activeCurriculum.code}
                                     </Badge>
                                     <Badge bg="info-subtle" className="text-info border border-info-subtle fs-12 px-2 py-1">
-                                        ระดับปริญญาโท
+                                        {activeCurriculum.degree_level || 'ระดับปริญญาโท'}
                                     </Badge>
                                 </div>
                                 <p className="text-muted fs-13 mb-2">
@@ -240,6 +413,30 @@ const CurriculumManagementPage: React.FC<Props> = ({ curriculums, is_admin }) =>
                                 </div>
                             </div>
                         </div>
+
+                        {/* Admin Action Buttons for Active Curriculum */}
+                        {is_admin && activeCurriculum && (
+                            <div className="d-flex align-items-center gap-2 mt-3 pt-3 border-top justify-content-end">
+                                <Button
+                                    variant="outline-primary"
+                                    size="sm"
+                                    className="d-inline-flex align-items-center gap-1"
+                                    onClick={() => handleOpenEditCurriculumModal(activeCurriculum)}
+                                >
+                                    <IconifyIcon icon="tabler:edit" className="fs-15" />
+                                    <span>แก้ไขข้อมูลหลักสูตร</span>
+                                </Button>
+                                <Button
+                                    variant="outline-danger"
+                                    size="sm"
+                                    className="d-inline-flex align-items-center gap-1"
+                                    onClick={() => handleDeleteCurriculum(activeCurriculum)}
+                                >
+                                    <IconifyIcon icon="tabler:trash" className="fs-15" />
+                                    <span>ลบหลักสูตร</span>
+                                </Button>
+                            </div>
+                        )}
                     </CardBody>
                 </Card>
             )}
@@ -482,6 +679,160 @@ const CurriculumManagementPage: React.FC<Props> = ({ curriculums, is_admin }) =>
                         <Button variant="primary" type="submit">
                             <IconifyIcon icon="tabler:device-floppy" className="me-1" />
                             บันทึกข้อมูล
+                        </Button>
+                    </Modal.Footer>
+                </form>
+            </Modal>
+
+            {/* Modal: เพิ่ม / แก้ไขหลักสูตร / สาขาวิชา */}
+            <Modal show={showCurriculumModal} onHide={() => setShowCurriculumModal(false)} size="lg" centered>
+                <form onSubmit={handleCurriculumSubmit}>
+                    <Modal.Header closeButton className="bg-light-subtle py-3 border-bottom">
+                        <Modal.Title as="h5" className="fw-bold text-dark fs-16 d-flex align-items-center gap-2">
+                            <IconifyIcon icon={editingCurriculum ? "tabler:edit" : "tabler:folder-plus"} className="text-primary fs-18" />
+                            <span>{editingCurriculum ? 'แก้ไขข้อมูลสาขาวิชา / หลักสูตร' : 'เพิ่มสาขาวิชา / หลักสูตรใหม่'}</span>
+                        </Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body className="p-4">
+                        <Row className="g-3">
+                            <Col md={4}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold fs-13">รหัสหลักสูตร <span className="text-danger">*</span></Form.Label>
+                                    <Form.Control
+                                        type="text"
+                                        placeholder="เช่น MPH-2566"
+                                        value={curriculumFormData.code}
+                                        onChange={(e) => setCurriculumFormData({ ...curriculumFormData, code: e.target.value })}
+                                        required
+                                    />
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={5}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold fs-13">ชื่อสาขาวิชา / หลักสูตร <span className="text-danger">*</span></Form.Label>
+                                    <Form.Control
+                                        type="text"
+                                        placeholder="เช่น หลักสูตรสาธารณสุขศาสตรมหาบัณฑิต (ส.ม.)"
+                                        value={curriculumFormData.name}
+                                        onChange={(e) => setCurriculumFormData({ ...curriculumFormData, name: e.target.value })}
+                                        required
+                                    />
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={3}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold fs-13">ระดับการศึกษา <span className="text-danger">*</span></Form.Label>
+                                    <Form.Select
+                                        value={curriculumFormData.degree_level}
+                                        onChange={(e) => setCurriculumFormData({ ...curriculumFormData, degree_level: e.target.value })}
+                                    >
+                                        <option value="ปริญญาโท">ปริญญาโท</option>
+                                        <option value="ปริญญาตรี">ปริญญาตรี</option>
+                                        <option value="ปริญญาเอก">ปริญญาเอก</option>
+                                    </Form.Select>
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={3}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold fs-13">หน่วยกิตรวมตลอดหลักสูตร <span className="text-danger">*</span></Form.Label>
+                                    <Form.Control
+                                        type="number"
+                                        min="1"
+                                        value={curriculumFormData.total_credits}
+                                        onChange={(e) => setCurriculumFormData({ ...curriculumFormData, total_credits: Number(e.target.value) })}
+                                        required
+                                    />
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={3}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold fs-13">หน่วยกิตวิชาบังคับ</Form.Label>
+                                    <Form.Control
+                                        type="number"
+                                        min="0"
+                                        value={curriculumFormData.core_credits_required}
+                                        onChange={(e) => setCurriculumFormData({ ...curriculumFormData, core_credits_required: Number(e.target.value) })}
+                                        required
+                                    />
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={3}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold fs-13">หน่วยกิตวิชาเลือก</Form.Label>
+                                    <Form.Control
+                                        type="number"
+                                        min="0"
+                                        value={curriculumFormData.elective_credits_required}
+                                        onChange={(e) => setCurriculumFormData({ ...curriculumFormData, elective_credits_required: Number(e.target.value) })}
+                                        required
+                                    />
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={3}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold fs-13">หน่วยกิตวิทยานิพนธ์ / IS</Form.Label>
+                                    <Form.Control
+                                        type="number"
+                                        min="0"
+                                        value={curriculumFormData.thesis_credits_required}
+                                        onChange={(e) => setCurriculumFormData({ ...curriculumFormData, thesis_credits_required: Number(e.target.value) })}
+                                        required
+                                    />
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={6}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold fs-13">เกรดเฉลี่ยขั้นต่ำเพื่อสำเร็จการศึกษา (GPA)</Form.Label>
+                                    <Form.Control
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        max="4"
+                                        value={curriculumFormData.min_gpa_graduate}
+                                        onChange={(e) => setCurriculumFormData({ ...curriculumFormData, min_gpa_graduate: Number(e.target.value) })}
+                                        required
+                                    />
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={6}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold fs-13">ปีการศึกษาที่เริ่มใช้หลักสูตร</Form.Label>
+                                    <Form.Control
+                                        type="text"
+                                        placeholder="เช่น 2566"
+                                        value={curriculumFormData.academic_year_start}
+                                        onChange={(e) => setCurriculumFormData({ ...curriculumFormData, academic_year_start: e.target.value })}
+                                    />
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={12}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold fs-13">คำอธิบายหลักสูตร / หมายเหตุ</Form.Label>
+                                    <Form.Control
+                                        as="textarea"
+                                        rows={3}
+                                        placeholder="รายละเอียดหรือโครงสร้างสังเขปของหลักสูตร"
+                                        value={curriculumFormData.description}
+                                        onChange={(e) => setCurriculumFormData({ ...curriculumFormData, description: e.target.value })}
+                                    />
+                                </Form.Group>
+                            </Col>
+                        </Row>
+                    </Modal.Body>
+                    <Modal.Footer className="bg-light-subtle py-2">
+                        <Button variant="outline-secondary" onClick={() => setShowCurriculumModal(false)}>ยกเลิก</Button>
+                        <Button variant="primary" type="submit">
+                            <IconifyIcon icon="tabler:device-floppy" className="me-1" />
+                            บันทึกข้อมูลหลักสูตร
                         </Button>
                     </Modal.Footer>
                 </form>

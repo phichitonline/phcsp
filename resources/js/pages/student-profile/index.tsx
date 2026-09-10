@@ -93,6 +93,13 @@ export interface StandardDocItem {
     thesis_category?: ThesisCategoryItem | null;
 }
 
+export interface CurriculumOption {
+    id: number;
+    code: string;
+    name: string;
+    degree_level?: string | null;
+}
+
 interface PageProps {
     student_profile: StudentProfileData;
     profile_user: {
@@ -113,6 +120,7 @@ interface PageProps {
     personal_documents?: PersonalDocItem[];
     standard_documents?: StandardDocItem[];
     all_students?: StudentProfileData[];
+    curriculums?: CurriculumOption[];
 }
 
 const StudentProfilePage = ({
@@ -123,6 +131,7 @@ const StudentProfilePage = ({
     personal_documents = [],
     standard_documents = [],
     all_students = [],
+    curriculums = [],
 }: PageProps) => {
     const avatarInputRef = useRef<HTMLInputElement>(null);
     const [activeTab, setActiveTab] = useState('personal');
@@ -148,7 +157,7 @@ const StudentProfilePage = ({
         phone: student_profile?.phone || '',
         line_id: student_profile?.line_id || '',
         faculty: student_profile?.faculty || 'วิทยาลัยการสาธารณสุขสิรินธร จังหวัดสุพรรณบุรี',
-        major: student_profile?.major || 'สาธารณสุขศาสตรบัณฑิต (สาธารณสุขชุมชน)',
+        major: student_profile?.major || (curriculums.length > 0 ? curriculums[0].name : 'หลักสูตรสาธารณสุขศาสตรมหาบัณฑิต (ส.ม.)'),
         academic_year: student_profile?.academic_year || '2567',
         class_year: student_profile?.class_year || 'ชั้นปีที่ 1',
         advisor_name: student_profile?.advisor_name || '',
@@ -1186,12 +1195,32 @@ const StudentProfilePage = ({
 
                             <Col md={8}>
                                 <Form.Group controlId="modalMajor">
-                                    <Form.Label className="fw-semibold text-dark fs-13">สาขาวิชา / หลักสูตร</Form.Label>
-                                    <Form.Control
-                                        type="text"
+                                    <Form.Label className="fw-semibold text-dark fs-13">สาขาวิชา / หลักสูตร <span className="text-danger">*</span></Form.Label>
+                                    <Form.Select
                                         value={formData.major}
                                         onChange={(e) => setFormData({ ...formData, major: e.target.value })}
-                                    />
+                                    >
+                                        <option value="">-- เลือกสาขาวิชา / หลักสูตร --</option>
+                                        {curriculums && curriculums.length > 0 ? (
+                                            curriculums.map((c) => (
+                                                <option key={c.id} value={c.name}>
+                                                    {c.code ? `[${c.code}] ` : ''}{c.name}
+                                                </option>
+                                            ))
+                                        ) : (
+                                            <>
+                                                <option value="หลักสูตรสาธารณสุขศาสตรมหาบัณฑิต (ส.ม.)">หลักสูตรสาธารณสุขศาสตรมหาบัณฑิต (ส.ม.)</option>
+                                                <option value="สาธารณสุขศาสตรบัณฑิต (สาธารณสุขชุมชน)">สาธารณสุขศาสตรบัณฑิต (สาธารณสุขชุมชน)</option>
+                                                <option value="สาธารณสุขศาสตรบัณฑิต (ทันตสาธารณสุข)">สาธารณสุขศาสตรบัณฑิต (ทันตสาธารณสุข)</option>
+                                                <option value="การแพทย์แผนไทยบัณฑิต">การแพทย์แผนไทยบัณฑิต</option>
+                                            </>
+                                        )}
+                                        {formData.major &&
+                                            (!curriculums || !curriculums.some(c => c.name === formData.major)) &&
+                                            !["หลักสูตรสาธารณสุขศาสตรมหาบัณฑิต (ส.ม.)", "สาธารณสุขศาสตรบัณฑิต (สาธารณสุขชุมชน)", "สาธารณสุขศาสตรบัณฑิต (ทันตสาธารณสุข)", "การแพทย์แผนไทยบัณฑิต"].includes(formData.major) && (
+                                                <option value={formData.major}>{formData.major}</option>
+                                        )}
+                                    </Form.Select>
                                 </Form.Group>
                             </Col>
 

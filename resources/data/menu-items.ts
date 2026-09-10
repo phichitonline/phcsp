@@ -66,7 +66,7 @@ export const MENU_ITEMS: MenuItemType[] = [
     },
     {
         key: 'curriculum',
-        label: 'โครงสร้างหลักสูตร',
+        label: 'สาขาวิชา / หลักสูตร',
         icon: 'tabler:books',
         url: '/credits/curriculum',
         roles: ['admin'],

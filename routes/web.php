@@ -74,6 +74,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/credits/save-student-grades', [CreditTrackingController::class, 'saveStudentGrades'])->name('credits.save-student-grades');
     Route::post('/credits/save-batch-grades', [CreditTrackingController::class, 'saveBatchGrades'])->name('credits.save-batch-grades');
     Route::get('/credits/curriculum', [CreditTrackingController::class, 'curriculumIndex'])->name('credits.curriculum');
+    Route::post('/credits/curriculum', [CreditTrackingController::class, 'storeCurriculum'])->name('credits.curriculum.store');
+    Route::delete('/credits/curriculum/{id}', [CreditTrackingController::class, 'destroyCurriculum'])->name('credits.curriculum.destroy');
     Route::post('/credits/courses', [CreditTrackingController::class, 'storeCourse'])->name('credits.courses.store');
     Route::delete('/credits/courses/{id}', [CreditTrackingController::class, 'destroyCourse'])->name('credits.courses.destroy');
 
