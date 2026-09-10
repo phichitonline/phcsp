@@ -100,16 +100,16 @@ const HosinfoDashboardPage = () => {
                 <Col xs={12}>
                     <div className="d-flex flex-column flex-lg-row gap-3 justify-content-center align-items-center w-100">
                         <IconLink 
-                            icon="ph:megaphone-fill" 
-                            title="ประกาศ" 
-                            subtitle="ข่าวสารและอัปเดต" 
+                            icon="ph:info-fill" 
+                            title="เกี่ยวกับเรา" 
+                            subtitle="เกี่ยวกับระบบและสถาบัน" 
                             href="/pages/about" 
                             color="#f59e0b" 
                         />
                         <IconLink 
                             icon="ph:users-fill" 
-                            title="ผู้พัฒนา" 
-                            subtitle="ติดต่อผู้พัฒนา" 
+                            title="ทีมผู้พัฒนา" 
+                            subtitle="ทีมงานและติดต่อเรา" 
                             href="/pages/contact-us" 
                             color="#6385e6" 
                         />

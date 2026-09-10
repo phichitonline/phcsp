@@ -164,7 +164,7 @@ const ContactUsPage = () => {
 
             <Container fluid className="py-2">
                 {/* Header Section */}
-                <div className="text-center mb-5">
+                <div className="text-center mb-4">
                     <span className="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill fs-13 fw-semibold mb-2">
                         <IconifyIcon icon="solar:users-group-two-rounded-bold-duotone" className="me-1 fs-16 align-middle" />
                         DEVELOPMENT TEAM
@@ -179,11 +179,7 @@ const ContactUsPage = () => {
                 </div>
 
                 {/* แถวที่ 1: ทีมบริหารโครงการและสถาปัตยกรรมระบบ (Row 1) */}
-                <div className="d-flex align-items-center mb-3">
-                    <span className="badge bg-primary px-2 py-1 rounded-pill me-2 fs-12">แถวที่ 1</span>
-                    <h5 className="fw-bold text-dark mb-0 fs-16">ฝ่ายบริหารโครงการ สถาปัตยกรรมระบบ และโครงสร้างพื้นฐาน</h5>
-                </div>
-                <Row className="g-4 mb-5 justify-content-center">
+                <Row className="g-4 mb-4 justify-content-center">
                     {teamMembers.slice(0, 4).map((member) => (
                         <Col key={member.id} xl={3} lg={6} md={6} sm={12}>
                             <Card className="h-100 border-0 shadow-sm rounded-4 text-center overflow-hidden position-relative">
@@ -264,10 +260,6 @@ const ContactUsPage = () => {
                 </Row>
 
                 {/* แถวที่ 2: ฝ่ายวิชาการ ทดสอบระบบ และสนับสนุนผู้ใช้งาน (Row 2) */}
-                <div className="d-flex align-items-center mb-3">
-                    <span className="badge bg-success px-2 py-1 rounded-pill me-2 fs-12">แถวที่ 2</span>
-                    <h5 className="fw-bold text-dark mb-0 fs-16">ฝ่ายวิชาการหลักสูตร พัฒนา API ทดสอบระบบ และสนับสนุนผู้ใช้งาน</h5>
-                </div>
                 <Row className="g-4 mb-5 justify-content-center">
                     {teamMembers.slice(4, 8).map((member) => (
                         <Col key={member.id} xl={3} lg={6} md={6} sm={12}>
