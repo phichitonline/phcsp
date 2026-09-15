@@ -62,7 +62,15 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() ? array_merge(
+                    $request->user()->loadMissing('department')->toArray(),
+                    [
+                        'is_admin' => $request->user()->isAdmin(),
+                        'is_teacher' => $request->user()->isTeacher(),
+                        'is_student' => $request->user()->isStudent(),
+                        'is_staff' => $request->user()->isStaff(),
+                    ]
+                ) : null,
             ],
             'ziggy' => fn (): array => [
                 ...(new Ziggy)->toArray(),

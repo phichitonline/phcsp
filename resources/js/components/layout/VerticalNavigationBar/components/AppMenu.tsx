@@ -132,19 +132,46 @@ const AppMenu = ({ menuItems }: AppMenuProps) => {
     const { url, props } = usePage();
     const user = (props.auth as any)?.user;
     const userRole = user?.role || 'guest';
+    const isStaff = Boolean(
+        user?.is_staff ||
+        userRole === 'admin' ||
+        userRole === 'teacher' ||
+        user?.department?.dp_name === 'Admin' ||
+        user?.department?.dp_name === 'อาจารย์'
+    );
 
     const filteredMenuItems = useMemo(() => {
         const filterItems = (items: MenuItemType[]): MenuItemType[] => {
             return items
                 .filter((item) => {
                     if (!item.roles) return true;
+                    if (isStaff && (item.roles.includes('admin') || item.roles.includes('teacher'))) {
+                        // เมนูจัดการผู้ใช้งาน ให้เฉพาะ Admin ตัวจริงเท่านั้น
+                        if (item.key === 'users') {
+                            return userRole === 'admin' || user?.is_admin;
+                        }
+                        return true;
+                    }
                     return item.roles.includes(userRole);
                 })
                 .map((item) => {
-                    if (item.children) {
-                        return { ...item, children: filterItems(item.children) };
+                    // ปรับเปลี่ยนเส้นทาง URL สำหรับบุคลากร (Admin และ อาจารย์)
+                    // เนื่องจากไม่มีทะเบียนประวัติตนเอง จึงสลับไปที่หน้ารายชื่อนักศึกษา
+                    let mappedUrl = item.url;
+                    if (isStaff) {
+                        if (item.key === 'student_profile') {
+                            mappedUrl = '/admin/students?action=profile';
+                        } else if (item.key === 'personal_documents') {
+                            mappedUrl = '/admin/students?action=documents';
+                        } else if (item.key === 'my_credits') {
+                            mappedUrl = '/admin/students?action=credits';
+                        }
                     }
-                    return item;
+
+                    if (item.children) {
+                        return { ...item, url: mappedUrl, children: filterItems(item.children) };
+                    }
+                    return { ...item, url: mappedUrl };
                 })
                 .filter((item) => {
                     // ถ้ามีลูกที่ถูกกรองจนหมด และไม่ใช่เมนูที่มี URL ตัวเอง ให้กรองออกด้วย (ยกเว้นเมนูหลักที่เป็นหัวข้อ)
@@ -155,7 +182,7 @@ const AppMenu = ({ menuItems }: AppMenuProps) => {
                 });
         };
         return filterItems(menuItems);
-    }, [menuItems, userRole]);
+    }, [menuItems, userRole, isStaff, user?.is_admin]);
 
     const [activeMenuItems, setActiveMenuItems] = useState<Array<string>>([]);
     const toggleMenu = (menuItem: MenuItemType, show: boolean) => {

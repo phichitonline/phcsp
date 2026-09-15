@@ -20,8 +20,8 @@ class StudentManagementController extends Controller
     public function index(Request $request)
     {
         $currentUser = auth()->user();
-        if (!$currentUser || $currentUser->role !== 'admin') {
-            abort(403, 'เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถเข้าถึงหน้านี้ได้');
+        if (!$currentUser || !$currentUser->isStaff()) {
+            abort(403, 'เฉพาะผู้ดูแลระบบและอาจารย์เท่านั้นที่สามารถเข้าถึงหน้านี้ได้');
         }
 
         // ดึงรายการเอกสารมาตรฐานทั้งหมดที่ active
@@ -241,8 +241,8 @@ class StudentManagementController extends Controller
     public function updateProfile(Request $request, $id)
     {
         $currentUser = auth()->user();
-        if (!$currentUser || $currentUser->role !== 'admin') {
-            abort(403);
+        if (!$currentUser || !$currentUser->isStaff()) {
+            abort(403, 'เฉพาะผู้ดูแลระบบและอาจารย์เท่านั้นที่สามารถบันทึกข้อมูลนี้ได้');
         }
 
         $user = User::findOrFail($id);

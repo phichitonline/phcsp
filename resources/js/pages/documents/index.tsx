@@ -1,13 +1,31 @@
 import React, { useState, useRef } from 'react';
-import { useForm, router } from '@inertiajs/react';
+import { useForm, router, usePage } from '@inertiajs/react';
 import { Card, CardBody, Col, Row, Button, Form, Badge, Table, InputGroup, ProgressBar } from 'react-bootstrap';
 import MainLayout from '@/layouts/MainLayout';
 import PageTitle from '@/components/PageTitle';
 import IconifyIcon from '@/components/wrappers/IconifyIcon';
 import Swal from 'sweetalert2';
 
-const MAX_FILE_SIZE_MB = 10;
+const MAX_FILE_SIZE_MB = 20;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const ALLOWED_EXTENSIONS = ['pdf', 'xls', 'xlsx', 'doc', 'docx', 'ppt', 'pptx'];
+
+export const getFileBadge = (fileName: string) => {
+    const ext = fileName?.split('.').pop()?.toLowerCase() || '';
+    if (ext === 'pdf') {
+        return { icon: 'tabler:file-type-pdf', color: 'danger', bg: 'danger-subtle', label: 'PDF' };
+    }
+    if (ext === 'xls' || ext === 'xlsx') {
+        return { icon: 'tabler:file-type-xls', color: 'success', bg: 'success-subtle', label: 'Excel' };
+    }
+    if (ext === 'doc' || ext === 'docx') {
+        return { icon: 'tabler:file-type-doc', color: 'primary', bg: 'primary-subtle', label: 'Word' };
+    }
+    if (ext === 'ppt' || ext === 'pptx') {
+        return { icon: 'tabler:file-type-ppt', color: 'warning', bg: 'warning-subtle', label: 'PowerPoint' };
+    }
+    return { icon: 'solar:file-text-bold-duotone', color: 'secondary', bg: 'secondary-subtle', label: ext.toUpperCase() };
+};
 
 interface DocumentItem {
     id: number;
@@ -38,10 +56,15 @@ interface PageProps {
         name: string;
         email: string;
         role?: string;
+        is_admin?: boolean;
     } | null;
 }
 
 const DocumentsPage = ({ documents = [], auth_user }: PageProps) => {
+    const { props } = usePage();
+    const currentUser = auth_user || (props.auth as any)?.user;
+    const isAdmin = Boolean(currentUser?.role === 'admin' || currentUser?.is_admin);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -54,7 +77,7 @@ const DocumentsPage = ({ documents = [], auth_user }: PageProps) => {
         document_file: File | null;
     }>({
         title: '',
-        uploader_name: auth_user?.name || '',
+        uploader_name: currentUser?.name || '',
         description: '',
         document_file: null,
     });
@@ -94,11 +117,12 @@ const DocumentsPage = ({ documents = [], auth_user }: PageProps) => {
             return;
         }
 
-        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        const ext = file.name.split('.').pop()?.toLowerCase() || '';
+        if (!ALLOWED_EXTENSIONS.includes(ext)) {
             Swal.fire({
                 icon: 'error',
                 title: 'ชนิดไฟล์ไม่ถูกต้อง',
-                text: 'กรุณาเลือกไฟล์เอกสารที่เป็นรูปแบบ PDF (.pdf) เท่านั้น',
+                text: 'กรุณาเลือกไฟล์เอกสารประเภท PDF (.pdf), Excel (.xls, .xlsx), Word (.doc, .docx) หรือ PowerPoint (.ppt, .pptx) เท่านั้น',
                 confirmButtonColor: '#465dff',
                 confirmButtonText: 'ตกลง',
             });
@@ -129,7 +153,7 @@ const DocumentsPage = ({ documents = [], auth_user }: PageProps) => {
                             <span style="background-color: #198754; color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold;">ไม่เกิน ${MAX_FILE_SIZE_MB} MB</span>
                         </div>
                         <div style="background-color: #fff3cd; color: #664d03; border-radius: 6px; padding: 10px; font-size: 13px; margin-top: 10px;">
-                            <strong>💡 คำแนะนำ:</strong> กรุณาลดขนาดไฟล์ (Compress PDF) หรือเลือกไฟล์ PDF ที่มีขนาดไม่เกิน <strong>${MAX_FILE_SIZE_MB} MB</strong>
+                            <strong>💡 คำแนะนำ:</strong> กรุณาเลือกไฟล์เอกสารที่มีขนาดไม่เกิน <strong>${MAX_FILE_SIZE_MB} MB</strong>
                         </div>
                     </div>
                 `,
@@ -328,249 +352,264 @@ const DocumentsPage = ({ documents = [], auth_user }: PageProps) => {
                 </Col>
             </Row>
 
-            {/* ส่วนที่ 1: แบบฟอร์มสำหรับอัปโหลดเอกสาร */}
-            <Card className="shadow-sm border-0 mb-4 overflow-hidden">
-                <Card.Header className="bg-light-subtle py-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <div className="d-flex align-items-center gap-2">
-                        <div className="avatar-sm rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style={{ width: 34, height: 34 }}>
-                            <IconifyIcon icon="solar:cloud-upload-bold-duotone" className="fs-20" />
+            {/* ส่วนที่ 1: แบบฟอร์มสำหรับอัปโหลดเอกสาร (เฉพาะ Admin เท่านั้น) */}
+            {isAdmin && (
+                <Card className="shadow-sm border-0 mb-4 overflow-hidden">
+                    <Card.Header className="bg-light-subtle py-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div className="d-flex align-items-center gap-2">
+                            <div className="avatar-sm rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style={{ width: 34, height: 34 }}>
+                                <IconifyIcon icon="solar:cloud-upload-bold-duotone" className="fs-20" />
+                            </div>
+                            <div>
+                                <h5 className="card-title mb-0 fw-bold text-dark fs-16">อัปโหลดเอกสารใหม่</h5>
+                                <small className="text-muted">กรอกข้อมูลและเลือกไฟล์เอกสารเพื่อจัดเก็บเข้าระบบ (สิทธิ์เฉพาะผู้ดูแลระบบ)</small>
+                            </div>
                         </div>
-                        <div>
-                            <h5 className="card-title mb-0 fw-bold text-dark fs-16">อัปโหลดเอกสารใหม่ (PDF)</h5>
-                            <small className="text-muted">กรอกข้อมูลและเลือกไฟล์เอกสาร PDF เพื่อจัดเก็บเข้าระบบ</small>
-                        </div>
-                    </div>
-                    <Badge bg="primary-subtle" className="text-primary px-3 py-2 rounded-pill fs-12 fw-medium border border-primary-subtle">
-                        <IconifyIcon icon="tabler:file-type-pdf" className="me-1 fs-14 align-middle" />
-                        รองรับเฉพาะไฟล์ .PDF (สูงสุด {MAX_FILE_SIZE_MB} MB)
-                    </Badge>
-                </Card.Header>
+                        <Badge bg="primary-subtle" className="text-primary px-3 py-2 rounded-pill fs-12 fw-medium border border-primary-subtle">
+                            <IconifyIcon icon="solar:document-text-bold-duotone" className="me-1 fs-14 align-middle" />
+                            รองรับ PDF, Excel, Word, PPT (สูงสุด {MAX_FILE_SIZE_MB} MB)
+                        </Badge>
+                    </Card.Header>
 
-                <CardBody className="p-4">
-                    <Form onSubmit={handleSubmit}>
-                        <Row className="g-3">
-                            {/* ชื่อเอกสาร */}
-                            <Col md={6}>
-                                <Form.Group controlId="documentTitle">
-                                    <Form.Label className="fw-semibold text-dark fs-14">
-                                        ชื่อเอกสาร <span className="text-danger">*</span>
-                                    </Form.Label>
-                                    <InputGroup>
-                                        <InputGroup.Text className="bg-light border-end-0">
-                                            <IconifyIcon icon="solar:document-text-bold-duotone" className="text-primary fs-18" />
-                                        </InputGroup.Text>
+                    <CardBody className="p-4">
+                        <Form onSubmit={handleSubmit}>
+                            <Row className="g-3">
+                                {/* ชื่อเอกสาร */}
+                                <Col md={6}>
+                                    <Form.Group controlId="documentTitle">
+                                        <Form.Label className="fw-semibold text-dark fs-14">
+                                            ชื่อเอกสาร <span className="text-danger">*</span>
+                                        </Form.Label>
+                                        <InputGroup>
+                                            <InputGroup.Text className="bg-light border-end-0">
+                                                <IconifyIcon icon="solar:document-text-bold-duotone" className="text-primary fs-18" />
+                                            </InputGroup.Text>
+                                            <Form.Control
+                                                type="text"
+                                                placeholder="เช่น ประกาศแต่งตั้งคณะทำงานฯ, ตารางสรุปข้อมูล..."
+                                                value={data.title}
+                                                onChange={(e) => setData('title', e.target.value)}
+                                                isInvalid={!!errors.title}
+                                                className="border-start-0"
+                                                required
+                                            />
+                                            {errors.title && (
+                                                <Form.Control.Feedback type="invalid">
+                                                    {errors.title}
+                                                </Form.Control.Feedback>
+                                            )}
+                                        </InputGroup>
+                                        <Form.Text className="text-muted fs-12">
+                                            ชื่อหัวข้อที่จะแสดงในรายการเอกสาร
+                                        </Form.Text>
+                                    </Form.Group>
+                                </Col>
+
+                                {/* ชื่อผู้อัปโหลด */}
+                                <Col md={6}>
+                                    <Form.Group controlId="uploaderName">
+                                        <Form.Label className="fw-semibold text-dark fs-14">
+                                            ชื่อผู้อัปโหลด <span className="text-danger">*</span>
+                                        </Form.Label>
+                                        <InputGroup>
+                                            <InputGroup.Text className="bg-light border-end-0">
+                                                <IconifyIcon icon="solar:user-bold-duotone" className="text-success fs-18" />
+                                            </InputGroup.Text>
+                                            <Form.Control
+                                                type="text"
+                                                placeholder="ระบุชื่อ-นามสกุล หรือแผนก/ฝ่าย"
+                                                value={data.uploader_name}
+                                                onChange={(e) => setData('uploader_name', e.target.value)}
+                                                isInvalid={!!errors.uploader_name}
+                                                className="border-start-0"
+                                                required
+                                            />
+                                            {errors.uploader_name && (
+                                                <Form.Control.Feedback type="invalid">
+                                                    {errors.uploader_name}
+                                                </Form.Control.Feedback>
+                                            )}
+                                        </InputGroup>
+                                        <Form.Text className="text-muted fs-12">
+                                            บันทึกชื่อผู้รับผิดชอบที่นำเอกสารเข้าระบบ
+                                        </Form.Text>
+                                    </Form.Group>
+                                </Col>
+
+                                {/* คำอธิบายเพิ่มเติม */}
+                                <Col md={12}>
+                                    <Form.Group controlId="documentDescription">
+                                        <Form.Label className="fw-semibold text-dark fs-14">
+                                            รายละเอียดเพิ่มเติม / หมายเหตุ <span className="text-muted fw-normal fs-12">(ถ้ามี)</span>
+                                        </Form.Label>
                                         <Form.Control
-                                            type="text"
-                                            placeholder="เช่น ประกาศแต่งตั้งคณะทำงานฯ, ระเบียบปฏิบัติงาน..."
-                                            value={data.title}
-                                            onChange={(e) => setData('title', e.target.value)}
-                                            isInvalid={!!errors.title}
-                                            className="border-start-0"
-                                            required
+                                            as="textarea"
+                                            rows={2}
+                                            placeholder="ระบุรายละเอียดโดยย่อเกี่ยวกับเอกสารฉบับนี้..."
+                                            value={data.description}
+                                            onChange={(e) => setData('description', e.target.value)}
+                                            isInvalid={!!errors.description}
                                         />
-                                        {errors.title && (
+                                        {errors.description && (
                                             <Form.Control.Feedback type="invalid">
-                                                {errors.title}
+                                                {errors.description}
                                             </Form.Control.Feedback>
                                         )}
-                                    </InputGroup>
-                                    <Form.Text className="text-muted fs-12">
-                                        ชื่อหัวข้อที่จะแสดงในรายการเอกสาร
-                                    </Form.Text>
-                                </Form.Group>
-                            </Col>
+                                    </Form.Group>
+                                </Col>
 
-                            {/* ชื่อผู้อัปโหลด */}
-                            <Col md={6}>
-                                <Form.Group controlId="uploaderName">
-                                    <Form.Label className="fw-semibold text-dark fs-14">
-                                        ชื่อผู้อัปโหลด <span className="text-danger">*</span>
-                                    </Form.Label>
-                                    <InputGroup>
-                                        <InputGroup.Text className="bg-light border-end-0">
-                                            <IconifyIcon icon="solar:user-bold-duotone" className="text-success fs-18" />
-                                        </InputGroup.Text>
-                                        <Form.Control
-                                            type="text"
-                                            placeholder="ระบุชื่อ-นามสกุล หรือแผนก/ฝ่าย"
-                                            value={data.uploader_name}
-                                            onChange={(e) => setData('uploader_name', e.target.value)}
-                                            isInvalid={!!errors.uploader_name}
-                                            className="border-start-0"
-                                            required
+                                {/* พื้นที่เลือกไฟล์ (Dropzone Style) */}
+                                <Col md={12}>
+                                    <Form.Group controlId="documentFile">
+                                        <Form.Label className="fw-semibold text-dark fs-14">
+                                            เลือกไฟล์เอกสาร <span className="text-danger">*</span>
+                                        </Form.Label>
+
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            accept=".pdf,.xls,.xlsx,.doc,.docx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                                            style={{ display: 'none' }}
+                                            onChange={(e) => {
+                                                if (e.target.files && e.target.files[0]) {
+                                                    handleFileChange(e.target.files[0]);
+                                                }
+                                            }}
                                         />
-                                        {errors.uploader_name && (
-                                            <Form.Control.Feedback type="invalid">
-                                                {errors.uploader_name}
-                                            </Form.Control.Feedback>
+
+                                        {!selectedFile ? (
+                                            <div
+                                                onDragOver={handleDragOver}
+                                                onDragLeave={handleDragLeave}
+                                                onDrop={handleDrop}
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className={`p-4 text-center rounded-3 border-2 border-dashed cursor-pointer transition-all ${
+                                                    isDragging
+                                                        ? 'border-primary bg-primary-subtle'
+                                                        : errors.document_file
+                                                        ? 'border-danger bg-danger-subtle'
+                                                        : 'border-secondary-subtle bg-light hover-border-primary'
+                                                }`}
+                                                style={{ cursor: 'pointer', transition: 'all 0.2s ease' }}
+                                            >
+                                                <div className="avatar-lg mx-auto mb-2 text-primary">
+                                                    <IconifyIcon icon="solar:file-smile-bold-duotone" className="display-5" />
+                                                </div>
+                                                <h6 className="fw-bold mb-1 text-dark fs-15">
+                                                    คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวางที่นี่
+                                                </h6>
+                                                <p className="text-muted fs-13 mb-1">
+                                                    รองรับไฟล์รูปแบบ <span className="fw-semibold text-danger">PDF</span>, <span className="fw-semibold text-success">Excel (.xls, .xlsx)</span>, <span className="fw-semibold text-primary">Word (.doc, .docx)</span>, <span className="fw-semibold text-warning">PPT (.ppt, .pptx)</span>
+                                                </p>
+                                                <small className="text-muted fs-12">
+                                                    ขนาดไฟล์สูงสุดไม่เกิน <strong>{MAX_FILE_SIZE_MB} MB</strong>
+                                                </small>
+                                            </div>
+                                        ) : (
+                                            (() => {
+                                                const badge = getFileBadge(selectedFile.name);
+                                                return (
+                                                    <div className="p-3 rounded-3 border border-success bg-success-subtle d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                                        <div className="d-flex align-items-center gap-3">
+                                                            <div className={`avatar-md rounded ${badge.bg} text-white d-flex align-items-center justify-content-center p-2`} style={{ width: 48, height: 48 }}>
+                                                                <IconifyIcon icon={badge.icon} className="fs-26" />
+                                                            </div>
+                                                            <div>
+                                                                <div className="d-flex align-items-center gap-2 mb-1">
+                                                                    <h6 className="fw-bold text-dark mb-0 fs-14">{selectedFile.name}</h6>
+                                                                    <Badge bg="secondary" className="fs-11 py-1 px-2 text-uppercase">
+                                                                        {badge.label}
+                                                                    </Badge>
+                                                                </div>
+                                                                <div className="text-muted fs-12 d-flex align-items-center flex-wrap gap-2">
+                                                                    <span>ขนาดไฟล์: <strong className={selectedFile.size >= MAX_FILE_SIZE_BYTES * 0.75 ? 'text-warning' : 'text-success'}>{formatBytes(selectedFile.size)}</strong> จากสูงสุด {MAX_FILE_SIZE_MB} MB</span>
+                                                                    <span>•</span>
+                                                                    <span className={`badge ${selectedFile.size >= MAX_FILE_SIZE_BYTES * 0.75 ? 'bg-warning text-dark' : 'bg-success text-white'} py-0 px-2`}>
+                                                                        {Math.min(100, Math.round((selectedFile.size / MAX_FILE_SIZE_BYTES) * 100))}%
+                                                                    </span>
+                                                                    <span className="text-success fw-medium">✓ ขนาดผ่านเกณฑ์</span>
+                                                                </div>
+                                                                <div style={{ maxWidth: '240px', marginTop: '6px' }}>
+                                                                    <ProgressBar
+                                                                        now={Math.min(100, Math.round((selectedFile.size / MAX_FILE_SIZE_BYTES) * 100))}
+                                                                        variant={selectedFile.size >= MAX_FILE_SIZE_BYTES * 0.75 ? 'warning' : 'success'}
+                                                                        style={{ height: '4px' }}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="d-flex gap-2">
+                                                            <Button
+                                                                variant="outline-secondary"
+                                                                size="sm"
+                                                                onClick={() => fileInputRef.current?.click()}
+                                                            >
+                                                                <IconifyIcon icon="solar:restart-bold" className="me-1" />
+                                                                เปลี่ยนไฟล์
+                                                            </Button>
+                                                            <Button
+                                                                variant="outline-danger"
+                                                                size="sm"
+                                                                onClick={() => handleFileChange(null)}
+                                                            >
+                                                                <IconifyIcon icon="solar:trash-bin-trash-bold" className="me-1" />
+                                                                ยกเลิก
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()
                                         )}
-                                    </InputGroup>
-                                    <Form.Text className="text-muted fs-12">
-                                        บันทึกชื่อผู้รับผิดชอบที่นำเอกสารเข้าระบบ
-                                    </Form.Text>
-                                </Form.Group>
-                            </Col>
 
-                            {/* คำอธิบายเพิ่มเติม */}
-                            <Col md={12}>
-                                <Form.Group controlId="documentDescription">
-                                    <Form.Label className="fw-semibold text-dark fs-14">
-                                        รายละเอียดเพิ่มเติม / หมายเหตุ <span className="text-muted fw-normal fs-12">(ถ้ามี)</span>
-                                    </Form.Label>
-                                    <Form.Control
-                                        as="textarea"
-                                        rows={2}
-                                        placeholder="ระบุรายละเอียดโดยย่อเกี่ยวกับเอกสารฉบับนี้..."
-                                        value={data.description}
-                                        onChange={(e) => setData('description', e.target.value)}
-                                        isInvalid={!!errors.description}
-                                    />
-                                    {errors.description && (
-                                        <Form.Control.Feedback type="invalid">
-                                            {errors.description}
-                                        </Form.Control.Feedback>
-                                    )}
-                                </Form.Group>
-                            </Col>
+                                        {errors.document_file && (
+                                            <div className="text-danger fs-12 mt-1 fw-medium">
+                                                {errors.document_file}
+                                            </div>
+                                        )}
+                                    </Form.Group>
+                                </Col>
 
-                            {/* พื้นที่เลือกไฟล์ PDF (Dropzone Style) */}
-                            <Col md={12}>
-                                <Form.Group controlId="documentFile">
-                                    <Form.Label className="fw-semibold text-dark fs-14">
-                                        เลือกไฟล์เอกสาร PDF <span className="text-danger">*</span>
-                                    </Form.Label>
-
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        accept="application/pdf,.pdf"
-                                        style={{ display: 'none' }}
-                                        onChange={(e) => {
-                                            if (e.target.files && e.target.files[0]) {
-                                                handleFileChange(e.target.files[0]);
-                                            }
+                                {/* ปุ่มดำเนินการ */}
+                                <Col md={12} className="d-flex justify-content-end gap-2 pt-2 border-top">
+                                    <Button
+                                        variant="light"
+                                        type="button"
+                                        disabled={processing}
+                                        onClick={() => {
+                                            reset('title', 'description', 'document_file');
+                                            setSelectedFile(null);
+                                            if (fileInputRef.current) fileInputRef.current.value = '';
                                         }}
-                                    />
+                                    >
+                                        <IconifyIcon icon="solar:eraser-bold" className="me-1" />
+                                        ล้างแบบฟอร์ม
+                                    </Button>
 
-                                    {!selectedFile ? (
-                                        <div
-                                            onDragOver={handleDragOver}
-                                            onDragLeave={handleDragLeave}
-                                            onDrop={handleDrop}
-                                            onClick={() => fileInputRef.current?.click()}
-                                            className={`p-4 text-center rounded-3 border-2 border-dashed cursor-pointer transition-all ${
-                                                isDragging
-                                                    ? 'border-primary bg-primary-subtle'
-                                                    : errors.document_file
-                                                    ? 'border-danger bg-danger-subtle'
-                                                    : 'border-secondary-subtle bg-light hover-border-primary'
-                                            }`}
-                                            style={{ cursor: 'pointer', transition: 'all 0.2s ease' }}
-                                        >
-                                            <div className="avatar-lg mx-auto mb-2 text-danger">
-                                                <IconifyIcon icon="solar:file-text-bold-duotone" className="display-5" />
-                                            </div>
-                                            <h6 className="fw-bold mb-1 text-dark fs-15">
-                                                คลิกเพื่อเลือกไฟล์ หรือลากไฟล์ PDF มาวางที่นี่
-                                            </h6>
-                                            <p className="text-muted fs-13 mb-0">
-                                                รองรับเฉพาะไฟล์รูปแบบ <span className="fw-semibold text-danger">.PDF</span> ขนาดไม่เกิน <strong>{MAX_FILE_SIZE_MB} MB</strong>
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <div className="p-3 rounded-3 border border-success bg-success-subtle d-flex align-items-center justify-content-between flex-wrap gap-2">
-                                            <div className="d-flex align-items-center gap-3">
-                                                <div className="avatar-md rounded bg-danger text-white d-flex align-items-center justify-content-center p-2" style={{ width: 48, height: 48 }}>
-                                                    <IconifyIcon icon="tabler:file-type-pdf" className="fs-26" />
-                                                </div>
-                                                <div>
-                                                    <h6 className="fw-bold text-dark mb-1 fs-14">{selectedFile.name}</h6>
-                                                    <div className="text-muted fs-12 d-flex align-items-center flex-wrap gap-2">
-                                                        <span>ขนาดไฟล์: <strong className={selectedFile.size >= MAX_FILE_SIZE_BYTES * 0.75 ? 'text-warning' : 'text-success'}>{formatBytes(selectedFile.size)}</strong> จากสูงสุด {MAX_FILE_SIZE_MB} MB</span>
-                                                        <span>•</span>
-                                                        <span className={`badge ${selectedFile.size >= MAX_FILE_SIZE_BYTES * 0.75 ? 'bg-warning text-dark' : 'bg-success text-white'} py-0 px-2`}>
-                                                            {Math.min(100, Math.round((selectedFile.size / MAX_FILE_SIZE_BYTES) * 100))}%
-                                                        </span>
-                                                        <span className="text-success fw-medium">✓ ขนาดผ่านเกณฑ์</span>
-                                                    </div>
-                                                    <div style={{ maxWidth: '240px', marginTop: '6px' }}>
-                                                        <ProgressBar
-                                                            now={Math.min(100, Math.round((selectedFile.size / MAX_FILE_SIZE_BYTES) * 100))}
-                                                            variant={selectedFile.size >= MAX_FILE_SIZE_BYTES * 0.75 ? 'warning' : 'success'}
-                                                            style={{ height: '4px' }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="d-flex gap-2">
-                                                <Button
-                                                    variant="outline-secondary"
-                                                    size="sm"
-                                                    onClick={() => fileInputRef.current?.click()}
-                                                >
-                                                    <IconifyIcon icon="solar:restart-bold" className="me-1" />
-                                                    เปลี่ยนไฟล์
-                                                </Button>
-                                                <Button
-                                                    variant="outline-danger"
-                                                    size="sm"
-                                                    onClick={() => handleFileChange(null)}
-                                                >
-                                                    <IconifyIcon icon="solar:trash-bin-trash-bold" className="me-1" />
-                                                    ยกเลิก
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {errors.document_file && (
-                                        <div className="text-danger fs-12 mt-1 fw-medium">
-                                            {errors.document_file}
-                                        </div>
-                                    )}
-                                </Form.Group>
-                            </Col>
-
-                            {/* ปุ่มดำเนินการ */}
-                            <Col md={12} className="d-flex justify-content-end gap-2 pt-2 border-top">
-                                <Button
-                                    variant="light"
-                                    type="button"
-                                    disabled={processing}
-                                    onClick={() => {
-                                        reset('title', 'description', 'document_file');
-                                        setSelectedFile(null);
-                                        if (fileInputRef.current) fileInputRef.current.value = '';
-                                    }}
-                                >
-                                    <IconifyIcon icon="solar:eraser-bold" className="me-1" />
-                                    ล้างแบบฟอร์ม
-                                </Button>
-
-                                <Button
-                                    variant="primary"
-                                    type="submit"
-                                    disabled={processing || !selectedFile}
-                                    className="px-4 fw-semibold"
-                                >
-                                    {processing ? (
-                                        <>
-                                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                            กำลังอัปโหลด...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <IconifyIcon icon="solar:upload-track-2-bold-duotone" className="me-2 fs-16 align-middle" />
-                                            บันทึกและอัปโหลดเอกสาร
-                                        </>
-                                    )}
-                                </Button>
-                            </Col>
-                        </Row>
-                    </Form>
-                </CardBody>
-            </Card>
+                                    <Button
+                                        variant="primary"
+                                        type="submit"
+                                        disabled={processing || !selectedFile}
+                                        className="px-4 fw-semibold"
+                                    >
+                                        {processing ? (
+                                            <>
+                                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                                กำลังอัปโหลด...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <IconifyIcon icon="solar:upload-track-2-bold-duotone" className="me-2 fs-16 align-middle" />
+                                                บันทึกและอัปโหลดเอกสาร
+                                            </>
+                                        )}
+                                    </Button>
+                                </Col>
+                            </Row>
+                        </Form>
+                    </CardBody>
+                </Card>
+            )}
 
             {/* ส่วนที่ 2: แสดงรายการเอกสารที่อัปโหลดแล้ว (ด้านล่างแบบฟอร์ม) */}
             <Card className="shadow-sm border-0 overflow-hidden">
@@ -652,95 +691,105 @@ const DocumentsPage = ({ documents = [], auth_user }: PageProps) => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredDocuments.map((doc, idx) => (
-                                        <tr key={doc.id}>
-                                            <td className="text-center text-muted fw-semibold">
-                                                {idx + 1}
-                                            </td>
-                                            <td>
-                                                <div className="d-flex align-items-start gap-3">
-                                                    <div className="avatar-sm rounded bg-danger-subtle text-danger d-flex align-items-center justify-content-center flex-shrink-0 mt-1" style={{ width: 38, height: 38 }}>
-                                                        <IconifyIcon icon="tabler:file-type-pdf" className="fs-22" />
+                                    {filteredDocuments.map((doc, idx) => {
+                                        const badge = getFileBadge(doc.file_name);
+                                        return (
+                                            <tr key={doc.id}>
+                                                <td className="text-center text-muted fw-semibold">
+                                                    {idx + 1}
+                                                </td>
+                                                <td>
+                                                    <div className="d-flex align-items-start gap-3">
+                                                        <div className={`avatar-sm rounded ${badge.bg}-subtle text-${badge.color} d-flex align-items-center justify-content-center flex-shrink-0 mt-1`} style={{ width: 38, height: 38 }}>
+                                                            <IconifyIcon icon={badge.icon} className="fs-22" />
+                                                        </div>
+                                                        <div className="overflow-hidden">
+                                                            <a
+                                                                href={doc.view_url || `/documents/${doc.id}/view`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="fw-bold text-dark text-decoration-none hover-primary d-block fs-14"
+                                                                title="คลิกเพื่อเปิดดูเอกสาร"
+                                                            >
+                                                                {doc.title}
+                                                            </a>
+                                                            {doc.description && (
+                                                                <p className="text-muted fs-12 mb-1 text-truncate" style={{ maxWidth: 420 }}>
+                                                                    {doc.description}
+                                                                </p>
+                                                            )}
+                                                            <div className="d-flex align-items-center gap-2 mt-1">
+                                                                <Badge bg="light" className={`text-${badge.color} border fs-10 px-1 py-0 text-uppercase`}>
+                                                                    {badge.label}
+                                                                </Badge>
+                                                                <span className="text-muted fs-11 d-flex align-items-center gap-1">
+                                                                    <IconifyIcon icon="solar:paperclip-linear" />
+                                                                    {doc.file_name}
+                                                                </span>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div className="overflow-hidden">
+                                                </td>
+                                                <td>
+                                                    <div className="d-flex align-items-center gap-2">
+                                                        <div className="avatar-xs rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center fw-bold fs-12" style={{ width: 28, height: 28 }}>
+                                                            {doc.uploader_name ? doc.uploader_name.charAt(0) : 'U'}
+                                                        </div>
+                                                        <span className="fw-medium text-dark fs-13">
+                                                            {doc.uploader_name || '-'}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div className="d-flex align-items-center text-dark fs-13">
+                                                        <IconifyIcon icon="solar:calendar-linear" className="me-1 text-muted fs-14" />
+                                                        {formatThaiDateTime(doc.created_at)}
+                                                    </div>
+                                                </td>
+                                                <td className="text-center">
+                                                    <Badge bg="light" className="text-dark border px-2 py-1 fs-12">
+                                                        {doc.formatted_file_size || formatBytes(doc.file_size)}
+                                                    </Badge>
+                                                </td>
+                                                <td className="text-center">
+                                                    <div className="d-flex align-items-center justify-content-center gap-1">
+                                                        {/* ดูเอกสารในแท็บใหม่ */}
                                                         <a
                                                             href={doc.view_url || `/documents/${doc.id}/view`}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className="fw-bold text-dark text-decoration-none hover-primary d-block fs-14"
-                                                            title="คลิกเพื่อเปิดดูเอกสาร PDF"
+                                                            className="btn btn-sm btn-soft-primary btn-icon"
+                                                            title="เปิดดู / ดาวน์โหลดเอกสาร"
                                                         >
-                                                            {doc.title}
+                                                            <IconifyIcon icon="solar:eye-bold" className="fs-16" />
                                                         </a>
-                                                        {doc.description && (
-                                                            <p className="text-muted fs-12 mb-1 text-truncate" style={{ maxWidth: 420 }}>
-                                                                {doc.description}
-                                                            </p>
+
+                                                        {/* ดาวน์โหลดเอกสาร */}
+                                                        <a
+                                                            href={`/documents/${doc.id}/download`}
+                                                            className="btn btn-sm btn-soft-success btn-icon"
+                                                            title="ดาวน์โหลดไฟล์"
+                                                        >
+                                                            <IconifyIcon icon="solar:download-minimalistic-bold" className="fs-16" />
+                                                        </a>
+
+                                                        {/* ลบเอกสาร (แสดงเฉพาะ Admin เท่านั้น) */}
+                                                        {isAdmin && (
+                                                            <Button
+                                                                variant="soft-danger"
+                                                                size="sm"
+                                                                className="btn-icon"
+                                                                title="ลบเอกสาร"
+                                                                onClick={() => handleDelete(doc)}
+                                                            >
+                                                                <IconifyIcon icon="solar:trash-bin-trash-bold" className="fs-16" />
+                                                            </Button>
                                                         )}
-                                                        <span className="text-muted fs-11 d-flex align-items-center gap-1">
-                                                            <IconifyIcon icon="solar:paperclip-linear" />
-                                                            {doc.file_name}
-                                                        </span>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div className="d-flex align-items-center gap-2">
-                                                    <div className="avatar-xs rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center fw-bold fs-12" style={{ width: 28, height: 28 }}>
-                                                        {doc.uploader_name ? doc.uploader_name.charAt(0) : 'U'}
-                                                    </div>
-                                                    <span className="fw-medium text-dark fs-13">
-                                                        {doc.uploader_name || '-'}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div className="d-flex align-items-center text-dark fs-13">
-                                                    <IconifyIcon icon="solar:calendar-linear" className="me-1 text-muted fs-14" />
-                                                    {formatThaiDateTime(doc.created_at)}
-                                                </div>
-                                            </td>
-                                            <td className="text-center">
-                                                <Badge bg="light" className="text-dark border px-2 py-1 fs-12">
-                                                    {doc.formatted_file_size || formatBytes(doc.file_size)}
-                                                </Badge>
-                                            </td>
-                                            <td className="text-center">
-                                                <div className="d-flex align-items-center justify-content-center gap-1">
-                                                    {/* ดูเอกสารในแท็บใหม่ */}
-                                                    <a
-                                                        href={doc.view_url || `/documents/${doc.id}/view`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="btn btn-sm btn-soft-primary btn-icon"
-                                                        title="เปิดดูเอกสาร PDF บนเบราว์เซอร์"
-                                                    >
-                                                        <IconifyIcon icon="solar:eye-bold" className="fs-16" />
-                                                    </a>
-
-                                                    {/* ดาวน์โหลดเอกสาร */}
-                                                    <a
-                                                        href={`/documents/${doc.id}/download`}
-                                                        className="btn btn-sm btn-soft-success btn-icon"
-                                                        title="ดาวน์โหลดไฟล์ PDF"
-                                                    >
-                                                        <IconifyIcon icon="solar:download-minimalistic-bold" className="fs-16" />
-                                                    </a>
-
-                                                    {/* ลบเอกสาร */}
-                                                    <Button
-                                                        variant="soft-danger"
-                                                        size="sm"
-                                                        className="btn-icon"
-                                                        title="ลบเอกสาร"
-                                                        onClick={() => handleDelete(doc)}
-                                                    >
-                                                        <IconifyIcon icon="solar:trash-bin-trash-bold" className="fs-16" />
-                                                    </Button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </Table>
                         </div>

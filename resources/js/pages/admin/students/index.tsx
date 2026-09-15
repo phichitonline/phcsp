@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import {
     Card,
     CardBody,
@@ -152,6 +152,11 @@ const StudentManagementPage = ({
     filters = {},
     curriculums = [],
 }: Props) => {
+    // Current route and action mode
+    const { url } = usePage();
+    const urlParams = useMemo(() => new URLSearchParams(url.includes('?') ? url.split('?')[1] : ''), [url]);
+    const currentAction = urlParams.get('action'); // 'profile' | 'documents' | 'credits' | null
+
     // Search and Filter State
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [filterProfileStatus, setFilterProfileStatus] = useState(filters.profile_status || 'all');
@@ -298,6 +303,62 @@ const StudentManagementPage = ({
     return (
         <MainLayout>
             <PageTitle title="รายชื่อนักศึกษา" subTitle="ระบบจัดการและติดตามสถานะทะเบียนประวัติและเอกสารนักศึกษา" />
+
+            {/* Action Banner เมื่อสลับมาจากเมนู ทะเบียนประวัติ, เอกสารประจำตัว, หรือความก้าวหน้าหน่วยกิต */}
+            {currentAction && (
+                <div
+                    className={`alert ${
+                        currentAction === 'profile'
+                            ? 'alert-warning border-warning'
+                            : currentAction === 'documents'
+                            ? 'alert-primary border-primary'
+                            : 'alert-success border-success'
+                    } d-flex align-items-center justify-content-between p-3 rounded-3 shadow-sm mb-3 mt-2`}
+                >
+                    <div className="d-flex align-items-center gap-3">
+                        <div
+                            className={`avatar-sm rounded-circle d-flex align-items-center justify-content-center shadow-sm ${
+                                currentAction === 'profile'
+                                    ? 'bg-warning text-white'
+                                    : currentAction === 'documents'
+                                    ? 'bg-primary text-white'
+                                    : 'bg-success text-white'
+                            }`}
+                            style={{ width: 44, height: 44 }}
+                        >
+                            <IconifyIcon
+                                icon={
+                                    currentAction === 'profile'
+                                        ? 'solar:user-id-bold'
+                                        : currentAction === 'documents'
+                                        ? 'solar:folder-with-files-bold'
+                                        : 'solar:diploma-bold'
+                                }
+                                className="fs-22"
+                            />
+                        </div>
+                        <div>
+                            <h6 className="mb-1 fw-bold fs-15">
+                                {currentAction === 'profile' && 'โหมดเลือกนักศึกษา: ดูและแก้ไขทะเบียนประวัติ'}
+                                {currentAction === 'documents' && 'โหมดเลือกนักศึกษา: ดูและตรวจสอบเอกสารประจำตัว'}
+                                {currentAction === 'credits' && 'โหมดเลือกนักศึกษา: ดูความก้าวหน้าหน่วยกิต ป.โท'}
+                            </h6>
+                            <p className="mb-0 fs-13 opacity-85">
+                                {currentAction === 'profile' && 'เนื่องจากผู้ใช้ประเภทอาจารย์และผู้ดูแลระบบไม่มีทะเบียนประวัตินักศึกษา กรุณาคลิกเลือกนักศึกษาในตารางเพื่อดูหรือแก้ไขข้อมูลทะเบียนประวัติ'}
+                                {currentAction === 'documents' && 'เนื่องจากผู้ใช้ประเภทอาจารย์และผู้ดูแลระบบไม่มีเอกสารประจำตัว กรุณาคลิกเลือกนักศึกษาในตารางเพื่อเปิดดูเอกสารประจำตัว'}
+                                {currentAction === 'credits' && 'กรุณาคลิกเลือกนักศึกษาในตารางเพื่อเปิดดูสรุปการสะสมหน่วยกิต และ Transcript ป.โท'}
+                            </p>
+                        </div>
+                    </div>
+                    <Link
+                        href="/admin/students"
+                        className="btn btn-sm btn-light border d-inline-flex align-items-center gap-1 shadow-sm flex-shrink-0 ms-3"
+                    >
+                        <IconifyIcon icon="solar:close-circle-linear" />
+                        <span>แสดงรายชื่อทั้งหมด</span>
+                    </Link>
+                </div>
+            )}
 
             {/* Quick Stats Cards */}
             <Row className="g-3 mt-1 mb-4">
@@ -547,11 +608,21 @@ const StudentManagementPage = ({
                                                         />
                                                         <div>
                                                             <div className="d-flex align-items-center gap-2 flex-wrap">
-                                                                <span className="fw-bold text-dark fs-14">
+                                                                <Link
+                                                                    href={
+                                                                        currentAction === 'documents'
+                                                                            ? `/personal-documents?user_id=${student.id}`
+                                                                            : currentAction === 'credits'
+                                                                            ? `/credits/student/${student.id}`
+                                                                            : `/student-profile?user_id=${student.id}`
+                                                                    }
+                                                                    className="fw-bold text-dark fs-14 text-decoration-none hover-text-primary"
+                                                                    title="คลิกเพื่อดูข้อมูลนักศึกษา"
+                                                                >
                                                                     {profile.title_prefix || ''}
                                                                     {profile.first_name_th || student.name}{' '}
                                                                     {profile.last_name_th || ''}
-                                                                </span>
+                                                                </Link>
                                                                 {profile.student_code && (
                                                                     <span className="badge bg-primary-subtle text-primary border border-primary-subtle fs-11 py-0 px-2">
                                                                         รหัส {profile.student_code}
@@ -581,79 +652,58 @@ const StudentManagementPage = ({
 
                                                 {/* สาขา / ชั้นปี / อาจารย์ที่ปรึกษา */}
                                                 <td>
-                                                    <div className="fs-13">
-                                                        <span className="fw-semibold text-dark d-block">
-                                                            {profile.major || 'สาธารณสุขศาสตรบัณฑิต'}
-                                                        </span>
-                                                        <div className="d-flex align-items-center gap-1 text-muted fs-12 mt-1">
-                                                            <span className="badge bg-light text-dark border fs-11">
-                                                                {profile.class_year || 'ชั้นปีที่ 2'}
-                                                            </span>
-                                                            <span className="badge bg-light text-muted border fs-11">
-                                                                ปีการศึกษา {profile.academic_year || '2567'}
-                                                            </span>
-                                                        </div>
-                                                        {profile.advisor_name && (
-                                                            <small className="text-muted d-block mt-1 fs-11">
-                                                                ที่ปรึกษา: {profile.advisor_name}
-                                                            </small>
-                                                        )}
+                                                    <div className="fw-semibold text-dark fs-13 text-truncate" style={{ maxWidth: 220 }}>
+                                                        {profile.major || 'สาธารณสุขศาสตรบัณฑิต'}
                                                     </div>
+                                                    <div className="text-muted fs-12 mt-1">
+                                                        {profile.class_year || 'ชั้นปีที่ 2'} (ปีการศึกษา {profile.academic_year || '2567'})
+                                                    </div>
+                                                    {profile.advisor_name && (
+                                                        <div className="text-muted fs-11 mt-1 d-flex align-items-center gap-1">
+                                                            <IconifyIcon icon="solar:user-speak-linear" className="fs-12 text-primary" />
+                                                            <span>อ.ที่ปรึกษา: {profile.advisor_name}</span>
+                                                        </div>
+                                                    )}
                                                 </td>
 
                                                 {/* สถานะทะเบียนประวัติ */}
                                                 <td className="text-center">
-                                                    {profStatus.is_updated ? (
-                                                        <div>
-                                                            <span className="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fs-12 d-inline-flex align-items-center gap-1 mb-1">
-                                                                <IconifyIcon icon="solar:check-circle-bold" className="fs-14" />
-                                                                อัปเดตแล้ว
-                                                            </span>
-                                                            <div className="d-flex align-items-center justify-content-center gap-2 mt-1">
-                                                                <ProgressBar
-                                                                    now={profStatus.completeness}
-                                                                    variant={profStatus.completeness >= 80 ? 'success' : 'primary'}
-                                                                    style={{ height: '5px', width: '80px' }}
-                                                                />
-                                                                <span className="fs-11 text-muted fw-semibold">{profStatus.completeness}%</span>
-                                                            </div>
-                                                            {profStatus.last_updated && (
-                                                                <small className="text-muted d-block fs-11 mt-1">
-                                                                    {profStatus.last_updated}
-                                                                </small>
-                                                            )}
+                                                    <div className="d-inline-block">
+                                                        {profStatus.is_updated ? (
+                                                            <Badge bg="success-subtle" className="text-success border border-success-subtle fs-11 py-1 px-2 mb-1">
+                                                                ✓ อัปเดตแล้ว
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge bg="warning-subtle" className="text-warning border border-warning-subtle fs-11 py-1 px-2 mb-1">
+                                                                ⏳ รอดำเนินการ
+                                                            </Badge>
+                                                        )}
+                                                        <div className="d-flex align-items-center justify-content-center gap-1">
+                                                            <ProgressBar
+                                                                now={profStatus.completeness}
+                                                                variant={profStatus.completeness >= 80 ? 'success' : profStatus.completeness >= 50 ? 'warning' : 'danger'}
+                                                                style={{ width: '60px', height: '5px' }}
+                                                            />
+                                                            <span className="text-muted fs-10">{profStatus.completeness}%</span>
                                                         </div>
-                                                    ) : (
-                                                        <div>
-                                                            <span className="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1 fs-12 d-inline-flex align-items-center gap-1 mb-1">
-                                                                <IconifyIcon icon="solar:clock-circle-bold" className="fs-14" />
-                                                                ยังไม่อัปเดต
-                                                            </span>
-                                                            <small className="text-muted d-block fs-11">
-                                                                รอนักศึกษาบันทึกข้อมูล
-                                                            </small>
-                                                        </div>
-                                                    )}
+                                                    </div>
                                                 </td>
 
                                                 {/* สถานะการอัปโหลดเอกสาร */}
                                                 <td className="text-center">
                                                     <div>
-                                                        <div className="d-flex align-items-center justify-content-center gap-2 mb-1">
-                                                            <span
-                                                                className={`badge ${
-                                                                    docStatus.is_completed
-                                                                        ? 'bg-success text-white'
-                                                                        : docStatus.uploaded_count > 0
-                                                                        ? 'bg-primary text-white'
-                                                                        : 'bg-light text-muted border'
-                                                                } fs-12 px-2 py-1 fw-semibold`}
-                                                            >
-                                                                {docStatus.uploaded_count} / {docStatus.total_count} รายการ
+                                                        <div className="d-flex align-items-center justify-content-center gap-1 mb-1">
+                                                            <span className="fw-bold fs-13 text-dark">
+                                                                {docStatus.uploaded_count}/{docStatus.total_count}
                                                             </span>
-                                                            <span className="fs-12 fw-bold text-dark">
-                                                                {docStatus.progress_percent}%
-                                                            </span>
+                                                            <span className="text-muted fs-11">ฉบับ</span>
+                                                            {docStatus.is_completed ? (
+                                                                <Badge bg="success" className="fs-10 px-1 py-0 ms-1">ครบ</Badge>
+                                                            ) : (
+                                                                <span className="text-primary fw-semibold fs-11 ms-1">
+                                                                    ({docStatus.progress_percent}%)
+                                                                </span>
+                                                            )}
                                                         </div>
 
                                                         <ProgressBar
@@ -672,36 +722,57 @@ const StudentManagementPage = ({
                                                 {/* การจัดการ (Actions) */}
                                                 <td className="text-center">
                                                     <div className="d-flex align-items-center justify-content-center gap-1">
-                                                        {/* ปุ่มแก้ไขทะเบียนประวัติ */}
+                                                        {/* 1. ปุ่มเปิดหน้าทะเบียนประวัตินักศึกษา (เต็มหน้า) */}
+                                                        <Link
+                                                            href={`/student-profile?user_id=${student.id}`}
+                                                            className={`btn btn-sm btn-icon ${
+                                                                currentAction === 'profile'
+                                                                    ? 'btn-warning shadow-sm text-dark fw-bold'
+                                                                    : 'btn-soft-warning'
+                                                            }`}
+                                                            title="เปิดหน้าทะเบียนประวัตินักศึกษาคนนี้"
+                                                        >
+                                                            <IconifyIcon icon="solar:user-id-bold" className="fs-16" />
+                                                        </Link>
+
+                                                        {/* 2. ปุ่มแก้ไขทะเบียนประวัติ (Modal) */}
                                                         <Button
-                                                            variant="soft-warning"
+                                                            variant="soft-secondary"
                                                             size="sm"
                                                             className="btn-icon"
-                                                            title="แก้ไขข้อมูลทะเบียนประวัตินักศึกษา"
+                                                            title="แก้ไขข้อมูลทะเบียนประวัตินักศึกษา (Modal)"
                                                             onClick={() => handleOpenEdit(student)}
                                                         >
                                                             <IconifyIcon icon="solar:pen-bold" className="fs-16" />
                                                         </Button>
 
-                                                        {/* ปุ่มคลิกเข้าไปดูเอกสารของนักศึกษา */}
+                                                        {/* 3. ปุ่มคลิกเข้าไปดูเอกสารของนักศึกษา */}
                                                         <Link
                                                             href={`/personal-documents?user_id=${student.id}`}
-                                                            className="btn btn-sm btn-soft-primary btn-icon"
+                                                            className={`btn btn-sm btn-icon ${
+                                                                currentAction === 'documents'
+                                                                    ? 'btn-primary shadow-sm text-white'
+                                                                    : 'btn-soft-primary'
+                                                            }`}
                                                             title="คลิกเข้าไปดูเอกสารประจำตัวของนักศึกษาคนนี้"
                                                         >
                                                             <IconifyIcon icon="solar:folder-with-files-bold" className="fs-16" />
                                                         </Link>
 
-                                                        {/* ปุ่มดูความก้าวหน้าหน่วยกิต ป.โท */}
+                                                        {/* 4. ปุ่มดูความก้าวหน้าหน่วยกิต ป.โท */}
                                                         <Link
                                                             href={`/credits/student/${student.id}`}
-                                                            className="btn btn-sm btn-soft-success btn-icon"
+                                                            className={`btn btn-sm btn-icon ${
+                                                                currentAction === 'credits'
+                                                                    ? 'btn-success shadow-sm text-white'
+                                                                    : 'btn-soft-success'
+                                                            }`}
                                                             title="ดูความก้าวหน้าหน่วยกิต / Transcript"
                                                         >
                                                             <IconifyIcon icon="solar:diploma-bold" className="fs-16" />
                                                         </Link>
 
-                                                        {/* ปุ่มดูรายละเอียดสรุป / เช็คลิสต์เอกสาร */}
+                                                        {/* 5. ปุ่มดูรายละเอียดสรุป / เช็คลิสต์เอกสาร */}
                                                         <Button
                                                             variant="soft-info"
                                                             size="sm"
@@ -1288,14 +1359,30 @@ const StudentManagementPage = ({
 
                 <Modal.Footer className="bg-light-subtle py-2 border-top">
                     {selectedStudent && (
-                        <div className="d-flex align-items-center justify-content-between w-100">
-                            <Link
-                                href={`/personal-documents?user_id=${selectedStudent.id}`}
-                                className="btn btn-sm btn-primary d-inline-flex align-items-center gap-1 shadow-sm"
-                            >
-                                <IconifyIcon icon="solar:folder-with-files-bold" className="fs-16" />
-                                <span>คลิกเข้าไปดูเอกสารของนักศึกษา</span>
-                            </Link>
+                        <div className="d-flex align-items-center justify-content-between w-100 flex-wrap gap-2">
+                            <div className="d-flex align-items-center gap-2 flex-wrap">
+                                <Link
+                                    href={`/student-profile?user_id=${selectedStudent.id}`}
+                                    className="btn btn-sm btn-outline-warning d-inline-flex align-items-center gap-1 shadow-sm"
+                                >
+                                    <IconifyIcon icon="solar:user-id-bold" className="fs-16" />
+                                    <span>ดูทะเบียนประวัติ</span>
+                                </Link>
+                                <Link
+                                    href={`/personal-documents?user_id=${selectedStudent.id}`}
+                                    className="btn btn-sm btn-primary d-inline-flex align-items-center gap-1 shadow-sm"
+                                >
+                                    <IconifyIcon icon="solar:folder-with-files-bold" className="fs-16" />
+                                    <span>ดูเอกสารประจำตัว</span>
+                                </Link>
+                                <Link
+                                    href={`/credits/student/${selectedStudent.id}`}
+                                    className="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1 shadow-sm"
+                                >
+                                    <IconifyIcon icon="solar:diploma-bold" className="fs-16" />
+                                    <span>ดูหน่วยกิต</span>
+                                </Link>
+                            </div>
                             <Button variant="light" size="sm" onClick={() => setShowViewModal(false)}>
                                 ปิด
                             </Button>

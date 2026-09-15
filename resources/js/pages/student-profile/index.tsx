@@ -422,7 +422,7 @@ const StudentProfilePage = ({
                                 </Button>
 
                                 <a
-                                    href="/personal-documents"
+                                    href={is_admin ? `/personal-documents?user_id=${profile_user.id}` : "/personal-documents"}
                                     className="btn btn-outline-primary d-inline-flex align-items-center gap-1"
                                 >
                                     <IconifyIcon icon="tabler:id-badge-2" className="fs-16" />
@@ -791,7 +791,7 @@ const StudentProfilePage = ({
                                             แสดงความคืบหน้าการส่งเอกสาร 27 รายการของนักศึกษา
                                         </small>
                                     </div>
-                                    <a href="/personal-documents" className="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
+                                    <a href={is_admin ? `/personal-documents?user_id=${profile_user.id}` : "/personal-documents"} className="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
                                         <IconifyIcon icon="solar:upload-track-2-bold" className="fs-16" />
                                         <span>ไปยังหน้าอัปโหลดเอกสารประจำตัว</span>
                                     </a>
@@ -877,7 +877,7 @@ const StudentProfilePage = ({
                                                                 </a>
                                                             ) : (
                                                                 <a
-                                                                    href="/personal-documents"
+                                                                    href={is_admin ? `/personal-documents?user_id=${profile_user.id}` : "/personal-documents"}
                                                                     className="btn btn-sm btn-outline-primary btn-icon"
                                                                     title="คลิกเพื่อไปอัปโหลด"
                                                                 >

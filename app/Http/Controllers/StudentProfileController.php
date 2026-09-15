@@ -19,50 +19,88 @@ class StudentProfileController extends Controller
     public function index(Request $request)
     {
         $currentUser = auth()->user();
-        $isAdmin = $currentUser && $currentUser->role === 'admin';
+        $isStaff = $currentUser && $currentUser->isStaff();
+        $isAdmin = $currentUser && $currentUser->isAdmin();
 
-        // Target user: Admin can view any user's profile via ?user_id=X, otherwise view own profile
-        $targetUserId = ($isAdmin && $request->has('user_id'))
+        // หากเป็น Admin หรือ อาจารย์ และไม่ได้ระบุ student user_id มา
+        // ให้ switch ไปหน้ารายชื่อนักศึกษา เพื่อเลือกนักศึกษาที่ต้องการดูข้อมูล
+        // และป้องกันไม่ให้สร้าง record student_profile สำหรับ admin/อาจารย์
+        if ($isStaff && !$request->filled('user_id')) {
+            return redirect()->route('admin.students.index', ['action' => 'profile'])
+                ->with('info', 'สำหรับอาจารย์และผู้ดูแลระบบ กรุณาเลือกนักศึกษาจากรายชื่อเพื่อดูทะเบียนประวัติ');
+        }
+
+        // Target user: Staff can view any student's profile via ?user_id=X, otherwise student views own profile
+        $targetUserId = ($isStaff && $request->filled('user_id'))
             ? $request->user_id
             : $currentUser->id;
 
-        $targetUser = User::with('department')->find($targetUserId) ?? $currentUser;
+        $targetUser = User::with('department')->find($targetUserId);
+        if (!$targetUser) {
+            if ($isStaff) {
+                return redirect()->route('admin.students.index', ['action' => 'profile'])
+                    ->with('error', 'ไม่พบข้อมูลนักศึกษาที่ระบุ');
+            }
+            $targetUser = $currentUser;
+        }
 
-        // Find or initialize student profile
-        $profile = StudentProfile::firstOrCreate(
-            ['user_id' => $targetUser->id],
-            [
-                'student_code' => '66' . str_pad($targetUser->id, 5, '0', STR_PAD_LEFT) . '1',
-                'national_id' => $targetUser->pid ?? '1729900' . str_pad($targetUser->id, 6, '0', STR_PAD_LEFT),
-                'title_prefix' => 'นาย',
-                'first_name_th' => explode(' ', $targetUser->name)[0] ?? 'สมชาย',
-                'last_name_th' => explode(' ', $targetUser->name)[1] ?? 'รักสุขภาพ',
-                'first_name_en' => 'Somchai',
-                'last_name_en' => 'Raksukphap',
-                'gender' => 'ชาย',
-                'birth_date' => '2004-05-15',
-                'blood_group' => 'B',
-                'religion' => 'พุทธ',
-                'ethnicity' => 'ไทย',
-                'nationality' => 'ไทย',
-                'phone' => '081-234-5678',
-                'line_id' => 'somchai.phc',
-                'faculty' => 'วิทยาลัยการสาธารณสุขสิรินธร จังหวัดสุพรรณบุรี',
-                'major' => 'สาธารณสุขศาสตรบัณฑิต (สาธารณสุขชุมชน)',
-                'academic_year' => '2567',
-                'class_year' => 'ชั้นปีที่ 2',
-                'advisor_name' => 'ดร.สมศรี มีสุข',
-                'student_status' => 'กำลังศึกษา',
-                'gpa' => 3.65,
-                'practicum_hospital' => 'โรงพยาบาลศูนย์เจ้าพระยายมราช สุพรรณบุรี',
-                'address' => '123/4 หมู่ที่ 5 ตำบลท่าพี่เลี้ยง อำเภอเมืองสุพรรณบุรี จังหวัดสุพรรณบุรี 72000',
-                'current_address' => 'หอพักนักศึกษา วสส.สุพรรณบุรี ห้อง 304',
-                'emergency_contact_name' => 'นายสมศักดิ์ รักสุขภาพ',
-                'emergency_relationship' => 'บิดา',
-                'emergency_phone' => '089-876-5432',
-                'health_conditions' => 'ไม่มีโรคประจำตัว, ไม่แพ้ยาหรืออาหาร',
-            ]
-        );
+        // หากผู้ใช้เป้าหมายไม่ใช่กลุ่มนักศึกษา และเป็น staff ไม่ควรมีทะเบียนประวัติ
+        if ($targetUser->isStaff() && !$targetUser->studentProfile) {
+            return redirect()->route('admin.students.index', ['action' => 'profile'])
+                ->with('warning', 'ผู้ใช้ประเภทผู้ดูแลระบบและอาจารย์ไม่มีทะเบียนประวัตินักศึกษา');
+        }
+
+        // ค้นหาทะเบียนประวัตินักศึกษา หรือสร้างเฉพาะกรณีเป็นนักศึกษาจริงๆ เท่านั้น
+        $profile = StudentProfile::where('user_id', $targetUser->id)->first();
+        if (!$profile) {
+            if ($targetUser->isStudent()) {
+                $nameParts = explode(' ', trim($targetUser->name), 2);
+                $firstName = $nameParts[0] ?? $targetUser->name;
+                $lastName = $nameParts[1] ?? '';
+                $titlePrefix = 'นาย';
+                if (str_starts_with($firstName, 'นางสาว') || str_starts_with($firstName, 'น.ส.')) {
+                    $titlePrefix = 'นางสาว';
+                } elseif (str_starts_with($firstName, 'นาง')) {
+                    $titlePrefix = 'นาง';
+                }
+
+                $profile = StudentProfile::create([
+                    'user_id' => $targetUser->id,
+                    'student_code' => '68' . str_pad($targetUser->id, 5, '0', STR_PAD_LEFT) . '1',
+                    'national_id' => $targetUser->pid ?? '1729900' . str_pad($targetUser->id, 6, '0', STR_PAD_LEFT),
+                    'title_prefix' => $titlePrefix,
+                    'first_name_th' => $firstName,
+                    'last_name_th' => $lastName,
+                    'first_name_en' => 'Student',
+                    'last_name_en' => 'Graduate',
+                    'gender' => in_array($titlePrefix, ['นางสาว', 'นาง']) ? 'หญิง' : 'ชาย',
+                    'birth_date' => '2004-05-15',
+                    'blood_group' => 'B',
+                    'religion' => 'พุทธ',
+                    'ethnicity' => 'ไทย',
+                    'nationality' => 'ไทย',
+                    'phone' => '081-234-5678',
+                    'line_id' => '',
+                    'faculty' => 'วิทยาลัยการสาธารณสุขสิรินธร จังหวัดสุพรรณบุรี',
+                    'major' => 'สาธารณสุขศาสตรมหาบัณฑิต',
+                    'academic_year' => '2567',
+                    'class_year' => 'ชั้นปีที่ 1',
+                    'advisor_name' => 'ดร.สมศรี มีสุข',
+                    'student_status' => 'กำลังศึกษา',
+                    'gpa' => 3.50,
+                    'practicum_hospital' => 'โรงพยาบาลศูนย์เจ้าพระยายมราช สุพรรณบุรี',
+                    'address' => 'วิทยาลัยการสาธารณสุขสิรินธร จังหวัดสุพรรณบุรี',
+                    'current_address' => 'หอพักนักศึกษา วสส.สุพรรณบุรี',
+                    'emergency_contact_name' => '',
+                    'emergency_relationship' => '',
+                    'emergency_phone' => '',
+                    'health_conditions' => 'ไม่มีโรคประจำตัว',
+                ]);
+            } else {
+                return redirect()->route('admin.students.index', ['action' => 'profile'])
+                    ->with('warning', 'ผู้ใช้งานรายนี้ไม่ใช่กลุ่มนักศึกษา จึงไม่มีทะเบียนประวัติ');
+            }
+        }
 
         // Get personal documents uploaded by this target user
         $personalDocs = PersonalDocument::where('user_id', $targetUser->id)
@@ -75,9 +113,9 @@ class StudentProfileController extends Controller
             ->orderBy('item_no', 'asc')
             ->get();
 
-        // If admin, get list of all students for directory view / quick switch
+        // If staff, get list of all students for directory view / quick switch
         $allStudents = [];
-        if ($isAdmin) {
+        if ($isStaff) {
             $allStudents = StudentProfile::with('user:id,name,email,avatar,role')
                 ->orderBy('student_code', 'asc')
                 ->get();
@@ -89,7 +127,7 @@ class StudentProfileController extends Controller
             'student_profile' => $profile,
             'profile_user' => $targetUser,
             'auth_user' => $currentUser,
-            'is_admin' => $isAdmin,
+            'is_admin' => $isStaff,
             'personal_documents' => $personalDocs,
             'standard_documents' => $standardDocs,
             'all_students' => $allStudents,
@@ -103,11 +141,16 @@ class StudentProfileController extends Controller
     public function update(Request $request)
     {
         $currentUser = auth()->user();
-        $isAdmin = $currentUser && $currentUser->role === 'admin';
+        $isStaff = $currentUser && $currentUser->isStaff();
 
-        $targetUserId = ($isAdmin && $request->has('user_id'))
+        $targetUserId = ($isStaff && $request->filled('user_id'))
             ? $request->user_id
             : $currentUser->id;
+
+        if ($isStaff && !$request->filled('user_id')) {
+            return redirect()->route('admin.students.index', ['action' => 'profile'])
+                ->with('warning', 'กรุณาเลือกนักศึกษาเพื่อแก้ไขทะเบียนประวัติ');
+        }
 
         $request->validate([
             'student_code' => 'nullable|string|max:50',

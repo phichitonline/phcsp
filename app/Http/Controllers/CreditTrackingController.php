@@ -227,12 +227,20 @@ class CreditTrackingController extends Controller
     public function studentCredit(Request $request, $id = null)
     {
         $currentUser = auth()->user();
-        $isAdmin = $currentUser && $currentUser->role === 'admin';
+        $isStaff = $currentUser && $currentUser->isStaff();
+        $isAdmin = $currentUser && $currentUser->isAdmin();
+
+        // หากเป็น Admin หรือ อาจารย์ และไม่ได้ระบุ id นักศึกษามา
+        // ให้ switch ไปหน้ารายชื่อนักศึกษา เพื่อเลือกนักศึกษาที่ต้องการดูความก้าวหน้าหน่วยกิต
+        if ($isStaff && empty($id)) {
+            return redirect()->route('admin.students.index', ['action' => 'credits'])
+                ->with('info', 'สำหรับอาจารย์และผู้ดูแลระบบ กรุณาเลือกนักศึกษาจากรายชื่อเพื่อดูความก้าวหน้าหน่วยกิต');
+        }
 
         $targetUserId = $id ? (int)$id : $currentUser->id;
 
-        // หากไม่ใช่ admin จะดูได้เฉพาะของตัวเอง
-        if (!$isAdmin && $currentUser->id !== $targetUserId) {
+        // หากไม่ใช่ staff จะดูได้เฉพาะของตัวเอง
+        if (!$isStaff && $currentUser->id !== $targetUserId) {
             abort(403, 'คุณไม่มีสิทธิ์ดูข้อมูลหน่วยกิตของนักศึกษาท่านอื่น');
         }
 
@@ -359,7 +367,7 @@ class CreditTrackingController extends Controller
     public function gradeEntry(Request $request)
     {
         $currentUser = auth()->user();
-        if (!$currentUser || $currentUser->role !== 'admin') {
+        if (!$currentUser || !$currentUser->isStaff()) {
             abort(403, 'เฉพาะผู้ดูแลระบบและอาจารย์ผู้สอนเท่านั้นที่สามารถเข้าถึงหน้านี้ได้');
         }
 
@@ -430,8 +438,8 @@ class CreditTrackingController extends Controller
     public function saveStudentGrades(Request $request)
     {
         $currentUser = auth()->user();
-        if (!$currentUser || $currentUser->role !== 'admin') {
-            abort(403, 'เฉพาะผู้ดูแลระบบเท่านั้น');
+        if (!$currentUser || !$currentUser->isStaff()) {
+            abort(403, 'เฉพาะผู้ดูแลระบบและอาจารย์เท่านั้น');
         }
 
         $request->validate([
@@ -499,8 +507,8 @@ class CreditTrackingController extends Controller
     public function saveBatchGrades(Request $request)
     {
         $currentUser = auth()->user();
-        if (!$currentUser || $currentUser->role !== 'admin') {
-            abort(403, 'เฉพาะผู้ดูแลระบบเท่านั้น');
+        if (!$currentUser || !$currentUser->isStaff()) {
+            abort(403, 'เฉพาะผู้ดูแลระบบและอาจารย์เท่านั้น');
         }
 
         $request->validate([

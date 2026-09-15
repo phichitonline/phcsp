@@ -17,20 +17,31 @@ class PersonalDocumentController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $isAdmin = $user && $user->role === 'admin';
+        $isStaff = $user && $user->isStaff();
+        $isAdmin = $user && $user->isAdmin();
+
+        // หากเป็น Admin หรือ อาจารย์ และไม่ได้ระบุ student user_id มา
+        // ให้ switch ไปหน้ารายชื่อนักศึกษา เพื่อเลือกนักศึกษาที่ต้องการดูเอกสาร
+        if ($isStaff && !$request->filled('user_id')) {
+            return redirect()->route('admin.students.index', ['action' => 'documents'])
+                ->with('info', 'สำหรับอาจารย์และผู้ดูแลระบบ กรุณาเลือกนักศึกษาจากรายชื่อเพื่อดูเอกสารประจำตัว');
+        }
 
         $targetUser = $user;
-        if ($isAdmin && $request->filled('user_id')) {
+        if ($isStaff && $request->filled('user_id')) {
             $foundUser = \App\Models\User::with('studentProfile')->find($request->user_id);
             if ($foundUser) {
                 $targetUser = $foundUser;
+            } else {
+                return redirect()->route('admin.students.index', ['action' => 'documents'])
+                    ->with('error', 'ไม่พบข้อมูลนักศึกษาที่ระบุ');
             }
         }
 
         $query = PersonalDocument::with('user:id,name,email')->orderBy('item_no', 'asc');
 
-        // หากเป็นผู้ใช้ทั่วไป หรือ admin กำลังดูของนักศึกษาคนใดคนหนึ่ง ให้กรองตาม user_id
-        if (!$isAdmin || $request->filled('user_id')) {
+        // หากเป็นผู้ใช้ทั่วไป หรือ staff กำลังดูของนักศึกษาคนใดคนหนึ่ง ให้กรองตาม user_id
+        if (!$isStaff || $request->filled('user_id')) {
             $query->where('user_id', $targetUser->id);
         }
 
@@ -47,7 +58,7 @@ class PersonalDocumentController extends Controller
             'thesis_categories' => $thesisCategories,
             'auth_user' => $user,
             'target_user' => $targetUser,
-            'is_admin' => $isAdmin,
+            'is_admin' => $isStaff,
         ]);
     }
 
@@ -97,8 +108,8 @@ class PersonalDocumentController extends Controller
         }
 
         $user = auth()->user();
-        $isAdmin = $user && $user->role === 'admin';
-        $targetUserId = ($isAdmin && $request->filled('user_id'))
+        $isStaff = $user && $user->isStaff();
+        $targetUserId = ($isStaff && $request->filled('user_id'))
             ? (int)$request->user_id
             : $user->id;
 
@@ -170,7 +181,7 @@ class PersonalDocumentController extends Controller
         $user = auth()->user();
 
         // ตรวจสอบสิทธิ์การเข้าถึงเอกสาร
-        if ($user && $user->role !== 'admin' && $document->user_id && $document->user_id !== $user->id) {
+        if ($user && !$user->isStaff() && $document->user_id && $document->user_id !== $user->id) {
             abort(403, 'คุณไม่มีสิทธิ์เข้าถึงเอกสารประจำตัวนี้');
         }
 
@@ -194,7 +205,7 @@ class PersonalDocumentController extends Controller
         $document = PersonalDocument::findOrFail($id);
         $user = auth()->user();
 
-        if ($user && $user->role !== 'admin' && $document->user_id && $document->user_id !== $user->id) {
+        if ($user && !$user->isStaff() && $document->user_id && $document->user_id !== $user->id) {
             abort(403, 'คุณไม่มีสิทธิ์ดาวน์โหลดเอกสารประจำตัวนี้');
         }
 
@@ -213,7 +224,7 @@ class PersonalDocumentController extends Controller
         $document = PersonalDocument::findOrFail($id);
         $user = auth()->user();
 
-        if ($user && $user->role !== 'admin' && $document->user_id && $document->user_id !== $user->id) {
+        if ($user && !$user->isStaff() && $document->user_id && $document->user_id !== $user->id) {
             abort(403, 'คุณไม่มีสิทธิ์ลบเอกสารประจำตัวนี้');
         }
 
