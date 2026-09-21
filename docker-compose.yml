@@ -8,8 +8,8 @@ services:
     #   context: .
     #   dockerfile: Dockerfile
     # หากต้องการดึงจาก Docker Hub (ใช้ชื่อ image ที่คุณตั้ง):
-    image: ${DOCKER_USERNAME:-yourusername}/hosinfo-app:${IMAGE_TAG:-latest}
-    container_name: hosinfo-app
+    image: ${DOCKER_USERNAME:-yourusername}/phcsp-app:${IMAGE_TAG:-latest}
+    container_name: phcsp-app
     restart: unless-stopped
     working_dir: /var/www
     env_file:
@@ -20,12 +20,14 @@ services:
       - ./public/storage:/var/www/public/storage
       - public-build:/var/www/public
     networks:
-      - hosinfo-network
+      - phcsp-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # Nginx Web Server
   nginx:
     image: nginx:alpine
-    container_name: hosinfo-nginx
+    container_name: phcsp-nginx
     restart: unless-stopped
     ports:
       - "8888:80"
@@ -36,12 +38,12 @@ services:
     depends_on:
       - app
     networks:
-      - hosinfo-network
+      - phcsp-network
 
   # MySQL Database
   db:
     image: mysql:8.0
-    container_name: hosinfo-db
+    container_name: phcsp-db
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: ${DB_DATABASE}
@@ -53,10 +55,10 @@ services:
     volumes:
       - dbdata:/var/lib/mysql
     networks:
-      - hosinfo-network
+      - phcsp-network
 
 networks:
-  hosinfo-network:
+  phcsp-network:
     driver: bridge
 
 volumes:

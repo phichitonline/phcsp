@@ -42,7 +42,7 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Copy entrypoint script
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
 
 # Set permissions
 RUN mkdir -p /var/www/storage/app/public
@@ -53,5 +53,5 @@ RUN chmod -R 777 /var/www/storage /var/www/bootstrap/cache
 
 EXPOSE 9000
 
-ENTRYPOINT ["entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["php-fpm"]

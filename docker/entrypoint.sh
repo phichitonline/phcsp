@@ -19,6 +19,9 @@ touch /var/www/storage/logs/laravel.log
 chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 chmod -R 777 /var/www/storage /var/www/bootstrap/cache
 
+# ล้าง Cache การตั้งค่าเดิมเพื่อให้โหลดค่าจาก .env ใหม่เสมอ
+php artisan optimize:clear
+
 # ฟังก์ชันรอ Database พร้อมทำงาน
 wait_for_db() {
     echo "Waiting for database connection..."
@@ -42,7 +45,7 @@ wait_for_db() {
 # รัน Migration อัตโนมัติ (Laravel จะเช็คเองว่าไฟล์ไหนรันไปแล้ว)
 wait_for_db
 echo "Checking and running migrations..."
-php artisan migrate --force
+php artisan migrate --force || echo "Migration skipped or failed, proceeding to start service..."
 
 # รันคำสั่งหลักของ Container (เช่น php-fpm)
 exec "$@"
