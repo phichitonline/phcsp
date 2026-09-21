@@ -1,6 +1,6 @@
 ﻿$IMAGE_NAME = "amedake01x/phcsp-app"
 $TAG = "latest"
-$WEBHOOK_URL = "https://10.10.8.132:65411/hook?access_key=E09nooMWtpyaNCMhXV8iHZ0P1DLS5ZekVEv4266mkpiKW55g" 
+$WEBHOOK_URL = "https://192.168.254.27:22091/hook?access_key=aELxFVrcmf8dKhU6ez6b9En0FH0r32jWo1RpLgEuPwPk8Rnl" 
 
 Write-Host "--- 1. Building Docker Image ---" -ForegroundColor Cyan
 docker build --platform linux/amd64 -t "${IMAGE_NAME}:${TAG}" .
