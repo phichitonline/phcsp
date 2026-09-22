@@ -6,12 +6,12 @@ import { Head } from '@inertiajs/react';
 import IconifyIcon from '@/components/wrappers/IconifyIcon';
 
 // Import team photos
-import member1Img from '@/images/team/member-1.jpg';
+import member1Img from '@/images/team/nopphadol.jpg';
 import member2Img from '@/images/team/preecha2.jpg';
 import member3Img from '@/images/team/nathaphong2.jpg';
 import member4Img from '@/images/team/witty2.jpg';
 import member5Img from '@/images/team/jack.jpg';
-import member6Img from '@/images/team/member-7.jpg';
+import member6Img from '@/images/team/wannarat.jpg';
 
 interface TeamMember {
     id: number;
