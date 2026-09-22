@@ -7,17 +7,27 @@ import Select from 'react-select';
 import Swal from 'sweetalert2';
 
 const CreateUserPage = () => {
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { departments = [] } = usePage().props as any;
+    const defaultDept = departments.find((dept: any) => dept.dp_name?.includes('อาจารย์'));
+
+    const { data, setData, post, processing, errors, reset } = useForm<{
+        name: string;
+        email: string;
+        password: string;
+        password_confirmation: string;
+        role: string;
+        department_id: string | number;
+        is_active: boolean;
+    }>({
         name: '',
         email: '',
         password: '',
         password_confirmation: '',
         role: 'user',
-        department_id: '',
+        department_id: defaultDept ? defaultDept.id : '',
         is_active: true,
     });
 
-    const { departments } = usePage().props as any;
     const deptOptions = departments.map((dept: any) => ({
         value: dept.id,
         label: dept.dp_name,
@@ -32,6 +42,10 @@ const CreateUserPage = () => {
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
+        // หากไม่ได้เลือกประเภท ให้กำหนดค่าเริ่มต้นเป็น "อาจารย์"
+        if (!data.department_id && defaultDept) {
+            data.department_id = defaultDept.id;
+        }
         post(route('users.store'), {
             onSuccess: () => {
                 Swal.fire({
@@ -87,10 +101,12 @@ const CreateUserPage = () => {
                                         <Select
                                             classNamePrefix="react-select"
                                             options={deptOptions}
+                                            value={deptOptions.find((opt: any) => opt.value === data.department_id) || null}
                                             onChange={(opt: any) => setData('department_id', opt ? opt.value : '')}
-                                            placeholder="ค้นหาหรือเลือกประเภท..."
+                                            placeholder="ค้นหาหรือเลือกประเภท (เริ่มต้น: อาจารย์)..."
                                             isClearable
                                         />
+                                        <small className="text-muted fs-11 mt-1 d-block">* หากไม่ได้ระบุ ระบบจะกำหนดเป็น "อาจารย์" ให้อัตโนมัติ</small>
                                         {errors.department_id && <div className="text-danger fs-13 mt-1">{errors.department_id}</div>}
                                     </Col>
 

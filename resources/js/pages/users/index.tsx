@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import PageTitle from '@/components/PageTitle';
 import IconifyIcon from '@/components/wrappers/IconifyIcon';
 import MainLayout from '@/layouts/MainLayout';
 import { Link, router, usePage } from '@inertiajs/react';
-import { Button, Card, Col, Row } from 'react-bootstrap';
+import { Card, Col, Row } from 'react-bootstrap';
 import Swal from 'sweetalert2';
-import { Grid, _ } from 'gridjs-react';
+import { Grid } from 'gridjs-react';
 import { html } from 'gridjs';
 import avatar1 from '@/images/users/avatar-2.jpg';
 
@@ -16,7 +16,12 @@ interface User {
     role: string;
     avatar?: string;
     department?: {
+        id?: number;
         dp_name: string;
+    };
+    student_profile?: {
+        id: number;
+        student_code?: string;
     };
     is_active: boolean;
 }
@@ -25,11 +30,35 @@ interface Props {
     users: User[];
 }
 
+type FilterType = 'all' | 'teacher' | 'student';
+
 const UsersPage = ({ users }: Props) => {
     const { props } = usePage();
+    const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
     // กำหนด default avatar path สำหรับใช้ใน GridJS html
     const defaultAvatar = avatar1;
+
+    const isTeacher = (user: User) => {
+        const deptName = user.department?.dp_name?.toLowerCase() || '';
+        const role = user.role?.toLowerCase() || '';
+        return deptName.includes('อาจารย์') || role === 'teacher' || role === 'instructor';
+    };
+
+    const isStudent = (user: User) => {
+        const deptName = user.department?.dp_name?.toLowerCase() || '';
+        const role = user.role?.toLowerCase() || '';
+        return deptName.includes('นักศึกษา') || role === 'student' || !!user.student_profile;
+    };
+
+    const teacherCount = useMemo(() => users.filter(isTeacher).length, [users]);
+    const studentCount = useMemo(() => users.filter(isStudent).length, [users]);
+
+    const filteredUsers = useMemo(() => {
+        if (activeFilter === 'teacher') return users.filter(isTeacher);
+        if (activeFilter === 'student') return users.filter(isStudent);
+        return users;
+    }, [users, activeFilter]);
 
     const handleDelete = (id: number, name: string) => {
         Swal.fire({
@@ -69,17 +98,92 @@ const UsersPage = ({ users }: Props) => {
             <Row>
                 <Col xs={12}>
                     <Card>
-                        <div className="card-header d-flex align-items-center justify-content-between border-bottom border-light">
-                            <h4 className="header-title">รายชื่อผู้ใช้งาน</h4>
-                            <div>
-                                <Link href={route('users.create')} className="btn btn-success bg-gradient">
-                                    <IconifyIcon icon="tabler:plus" className="me-1" /> เพิ่มผู้ใช้งาน
-                                </Link>
+                        <div className="card-header border-bottom border-light">
+                            <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                                <div className="d-flex flex-wrap align-items-center gap-3">
+                                    <h4 className="header-title mb-0">รายชื่อผู้ใช้งาน</h4>
+
+                                    {/* Filter Buttons */}
+                                    <div className="btn-group p-1 bg-light rounded-pill border" role="group" aria-label="ตัวกรองประเภทผู้ใช้งาน">
+                                        <button
+                                            type="button"
+                                            className={`btn btn-sm rounded-pill px-3 fw-medium d-inline-flex align-items-center ${
+                                                activeFilter === 'all'
+                                                    ? 'btn-primary text-white shadow-sm'
+                                                    : 'btn-light text-secondary border-0'
+                                            }`}
+                                            onClick={() => setActiveFilter('all')}
+                                        >
+                                            <IconifyIcon icon="solar:users-group-two-rounded-bold-duotone" className="me-1 fs-16" />
+                                            <span>ทั้งหมด</span>
+                                            <span
+                                                className={`badge ms-2 rounded-pill ${
+                                                    activeFilter === 'all'
+                                                        ? 'bg-white text-primary'
+                                                        : 'bg-secondary-subtle text-secondary'
+                                                }`}
+                                            >
+                                                {users.length}
+                                            </span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            className={`btn btn-sm rounded-pill px-3 fw-medium d-inline-flex align-items-center ${
+                                                activeFilter === 'teacher'
+                                                    ? 'btn-info text-white shadow-sm'
+                                                    : 'btn-light text-secondary border-0'
+                                            }`}
+                                            onClick={() => setActiveFilter('teacher')}
+                                        >
+                                            <IconifyIcon icon="solar:square-academic-cap-bold-duotone" className="me-1 fs-16" />
+                                            <span>อาจารย์</span>
+                                            <span
+                                                className={`badge ms-2 rounded-pill ${
+                                                    activeFilter === 'teacher'
+                                                        ? 'bg-white text-info'
+                                                        : 'bg-info-subtle text-info'
+                                                }`}
+                                            >
+                                                {teacherCount}
+                                            </span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            className={`btn btn-sm rounded-pill px-3 fw-medium d-inline-flex align-items-center ${
+                                                activeFilter === 'student'
+                                                    ? 'btn-success text-white shadow-sm'
+                                                    : 'btn-light text-secondary border-0'
+                                            }`}
+                                            onClick={() => setActiveFilter('student')}
+                                        >
+                                            <IconifyIcon icon="solar:backpack-bold-duotone" className="me-1 fs-16" />
+                                            <span>นักศึกษา</span>
+                                            <span
+                                                className={`badge ms-2 rounded-pill ${
+                                                    activeFilter === 'student'
+                                                        ? 'bg-white text-success'
+                                                        : 'bg-success-subtle text-success'
+                                                }`}
+                                            >
+                                                {studentCount}
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Link href={route('users.create')} className="btn btn-success bg-gradient rounded-pill px-3 shadow-sm">
+                                        <IconifyIcon icon="tabler:plus" className="me-1 align-middle fs-16" /> เพิ่มผู้ใช้งาน
+                                    </Link>
+                                </div>
                             </div>
                         </div>
                         
                         <Grid
-                            data={users.map((user, idx) => [
+                            key={`users-grid-${activeFilter}`}
+                            data={filteredUsers.map((user, idx) => [
                                 idx + 1,
                                 user.name,
                                 user.email,
@@ -111,6 +215,21 @@ const UsersPage = ({ users }: Props) => {
                                 },
                                 {
                                     name: 'ประเภท',
+                                    formatter: (dept: string) => {
+                                        let badgeClass = 'bg-secondary-subtle text-secondary border';
+                                        if (dept.includes('อาจารย์')) {
+                                            badgeClass = 'bg-info-subtle text-info border border-info-subtle';
+                                        } else if (dept.includes('นักศึกษา')) {
+                                            badgeClass = 'bg-success-subtle text-success border border-success-subtle';
+                                        } else if (dept.includes('Admin')) {
+                                            badgeClass = 'bg-danger-subtle text-danger border border-danger-subtle';
+                                        }
+                                        return html(
+                                            `<span class="badge ${badgeClass} px-2 py-1 rounded-pill fw-medium fs-12">
+                                                ${dept}
+                                            </span>`
+                                        );
+                                    }
                                 },
                                 {
                                     name: 'บทบาท (Role)',
@@ -165,7 +284,6 @@ const UsersPage = ({ users }: Props) => {
                                 }
                             ]}
                             search={{
-                                enabled: true,
                                 selector: (cell: any, _rowIndex: number, cellIndex: number) => {
                                     if (cellIndex === 6) return '';
                                     return cell !== null && cell !== undefined ? String(cell) : '';
@@ -176,16 +294,16 @@ const UsersPage = ({ users }: Props) => {
                             }}
                             sort={true}
                             language={{
-                                'search': {
-                                    'placeholder': 'ค้นหา...'
+                                search: {
+                                    placeholder: 'ค้นหา...'
                                 },
-                                'pagination': {
-                                    'previous': 'ก่อนหน้า',
-                                    'next': 'ถัดไป',
-                                    'showing': 'แสดง',
-                                    'results': () => 'รายการ'
+                                pagination: {
+                                    previous: 'ก่อนหน้า',
+                                    next: 'ถัดไป',
+                                    showing: 'แสดง',
+                                    results: () => 'รายการ'
                                 },
-                                'noRecordsFound': 'ไม่พบรายชื่อผู้ใช้งาน'
+                                noRecordsFound: 'ไม่พบรายชื่อผู้ใช้งาน'
                             }}
                             className={{
                                 table: 'table table-hover align-middle mb-0',

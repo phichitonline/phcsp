@@ -53,7 +53,7 @@ class UserController extends Controller
         if (auth()->user()->role !== 'admin') {
             return redirect()->route('dashboard')->with('error', 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้');
         }
-        $users = User::with('department')->orderBy('name')->get();
+        $users = User::with(['department', 'studentProfile'])->orderBy('name')->get();
         return Inertia::render('users/index', [
             'users' => $users
         ]);
@@ -90,18 +90,27 @@ class UserController extends Controller
             'is_active' => 'required|boolean',
         ]);
 
+        // หากไม่ได้เลือกประเภท ให้ค่าเริ่มต้นเป็น "อาจารย์"
+        $departmentId = $request->department_id;
+        if (empty($departmentId)) {
+            $defaultDept = Department::where('dp_name', 'like', '%อาจารย์%')->first();
+            if ($defaultDept) {
+                $departmentId = $defaultDept->id;
+            }
+        }
+
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $request->role,
-            'department_id' => $request->department_id,
+            'department_id' => $departmentId,
             'is_active' => $request->is_active,
         ]);
 
         // หากเลือกประเภทเป็น "นักศึกษา" ให้สร้างข้อมูลลงในทะเบียนนักศึกษา (StudentProfile) โดยอัตโนมัติ
-        if ($request->department_id) {
-            $department = Department::find($request->department_id);
+        if ($departmentId) {
+            $department = Department::find($departmentId);
             if ($department && trim($department->dp_name) === 'นักศึกษา') {
                 $nameParts = explode(' ', trim($request->name), 2);
                 $firstName = $nameParts[0] ?? $request->name;
