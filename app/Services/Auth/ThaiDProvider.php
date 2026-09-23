@@ -13,7 +13,7 @@ class ThaiDProvider extends AbstractProvider implements ProviderInterface
      *
      * @var array
      */
-    protected $scopes = ['pid', 'title', 'given_name', 'family_name', 'birthdate'];
+    protected $scopes = ['pid', 'name'];
 
     /**
      * The separating character for the requested scopes.
