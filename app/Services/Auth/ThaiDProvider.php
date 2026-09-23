@@ -44,46 +44,37 @@ class ThaiDProvider extends AbstractProvider implements ProviderInterface
     }
 
     /**
-     * Get the headers for the access token request.
+     * Override user method to bypass userinfo endpoint, 
+     * since ThaiD returns user data directly in the token response.
      *
-     * @param  string  $code
-     * @return array
+     * @return \Laravel\Socialite\Two\User
      */
-    protected function getTokenHeaders($code)
+    public function user()
     {
-        return [
-            'Accept' => 'application/json',
-            'x-Imauth-Apikey' => config('services.thaid.api_key'),
-            'Authorization' => 'Basic ' . base64_encode($this->clientId . ':' . $this->clientSecret),
-        ];
-    }
+        if ($this->hasInvalidState()) {
+            throw new \Laravel\Socialite\Two\InvalidStateException;
+        }
 
-    /**
-     * Get the raw user for the given access token.
-     *
-     * @param  string  $token
-     * @return array
-     */
-    protected function getUserByToken($token)
-    {
+        $response = $this->getAccessTokenResponse($this->getCode());
+
         // Mocked response for development since credentials are mock
         if (config('services.thaid.client_id') === 'mock-client-id') {
-            return [
+            $response = array_merge($response, [
                 'pid' => '1234567890123',
                 'name' => 'Mock User',
                 'given_name' => 'Mock',
                 'family_name' => 'User',
-            ];
+            ]);
         }
 
-        $response = $this->getHttpClient()->post('https://imauth.bora.dopa.go.th/api/v2/oauth2/userinfo/', [
-            'headers' => [
-                'Authorization' => 'Bearer ' . $token,
-                'x-Imauth-Apikey' => config('services.thaid.api_key'),
-            ],
-        ]);
+        $user = $this->mapUserToObject($response);
 
-        return json_decode($response->getBody(), true);
+        $token = \Illuminate\Support\Arr::get($response, 'access_token');
+
+        return $user->setToken($token)
+                    ->setRefreshToken(\Illuminate\Support\Arr::get($response, 'refresh_token'))
+                    ->setExpiresIn(\Illuminate\Support\Arr::get($response, 'expires_in'))
+                    ->setApprovedScopes(explode($this->scopeSeparator, \Illuminate\Support\Arr::get($response, 'scope', '')));
     }
 
     /**
@@ -101,5 +92,17 @@ class ThaiDProvider extends AbstractProvider implements ProviderInterface
             'email' => null,
             'avatar' => null,
         ]);
+    }
+
+    /**
+     * Get the raw user for the given access token.
+     * Required by AbstractProvider but bypassed since we override user().
+     *
+     * @param  string  $token
+     * @return array
+     */
+    protected function getUserByToken($token)
+    {
+        return [];
     }
 }
