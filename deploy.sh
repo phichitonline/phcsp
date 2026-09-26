@@ -3,7 +3,7 @@
 # สั่งให้สคริปต์หยุดทำงานทันทีหากมีคำสั่งใดรันล้มเหลว
 set -e
 
-$IMAGE_NAME = "amedake01x/phcsp-app"
+IMAGE_NAME="amedake01x/phcsp-app"
 TAG="latest"
 WEBHOOK_URL="https://192.168.254.27:22091/hook?access_key=aELxFVrcmf8dKhU6ez6b9En0FH0r32jWo1RpLgEuPwPk8Rnl"
 
