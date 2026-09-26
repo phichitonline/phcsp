@@ -152,7 +152,7 @@ const SupportPage = () => {
             <Container fluid className="py-2">
                 {/* Hero Header & Search */}
                 <Row className="justify-content-center mb-4">
-                    <Col lg={11} xl={10}>
+                    <Col lg={12} xl={12}>
                         <Card className="border-0 shadow-sm rounded-4 overflow-hidden text-center text-white position-relative"
                             style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 60%, #009688 100%)', padding: '40px 20px' }}>
                             <div className="badge bg-white-subtle text-white px-3 py-2 rounded-pill fs-12 fw-semibold mb-2 d-inline-block">
@@ -191,7 +191,7 @@ const SupportPage = () => {
                 </Row>
 
                 <Row className="justify-content-center">
-                    <Col lg={11} xl={10}>
+                    <Col lg={12} xl={12}>
                         {/* Section 1: User Guides */}
                         <div className="d-flex align-items-center justify-content-between mb-3">
                             <div>

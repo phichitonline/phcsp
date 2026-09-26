@@ -27,6 +27,8 @@ use App\Http\Controllers\StandardDocumentController;
 use App\Http\Controllers\StudentProfileController;
 use App\Http\Controllers\StudentManagementController;
 use App\Http\Controllers\CreditTrackingController;
+use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\StudentActivityController;
 use Inertia\Inertia;
 
 require __DIR__.'/auth.php';
@@ -88,6 +90,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/users/profile/avatar', [\App\Http\Controllers\UserController::class, 'updateAvatar'])->name('users.avatar');
     Route::resource('users', \App\Http\Controllers\UserController::class);
     
+    // ระบบกิจกรรมนักศึกษา (ฝั่งนักศึกษา)
+    Route::get('/student/activities', [StudentActivityController::class, 'dashboard'])->name('student.activities.dashboard');
+    Route::get('/student/activities/guide', [StudentActivityController::class, 'guide'])->name('student.activities.guide');
+    Route::post('/student/activities/{id}/register', [StudentActivityController::class, 'register'])->name('student.activities.register');
+    Route::get('/student/activities/{id}/check-in', [StudentActivityController::class, 'checkInView'])->name('student.activities.checkin');
+    Route::post('/student/activities/{id}/check-in', [StudentActivityController::class, 'submitCheckIn'])->name('student.activities.submit-checkin');
+    Route::post('/student/activities/{id}/check-out', [StudentActivityController::class, 'submitCheckOut'])->name('student.activities.submit-checkout');
+    Route::get('/student/activity-history', [StudentActivityController::class, 'history'])->name('student.activities.history');
+    Route::get('/student/activity-certificate/{id}', [StudentActivityController::class, 'certificate'])->name('student.activities.certificate');
+
+    // ระบบจัดการกิจกรรมนักศึกษา (ฝั่งอาจารย์ / ผู้ดูแลระบบ)
+    Route::get('/activities', [ActivityController::class, 'index'])->name('activities.index');
+    Route::get('/activities/guide', [ActivityController::class, 'guide'])->name('activities.guide');
+    Route::post('/activities', [ActivityController::class, 'store'])->name('activities.store');
+    Route::get('/activities/{id}', [ActivityController::class, 'show'])->name('activities.show');
+    Route::put('/activities/{id}', [ActivityController::class, 'update'])->name('activities.update');
+    Route::delete('/activities/{id}', [ActivityController::class, 'destroy'])->name('activities.destroy');
+    Route::get('/activities/{id}/live', [ActivityController::class, 'liveScreen'])->name('activities.live');
+    Route::get('/activities/{id}/dynamic-qr', [ActivityController::class, 'getDynamicQrToken'])->name('activities.dynamic-qr');
+    Route::post('/activities/{id}/import-students', [ActivityController::class, 'importTargetStudents'])->name('activities.import-students');
+    Route::post('/activities/{id}/override', [ActivityController::class, 'overrideAttendance'])->name('activities.override');
+    Route::get('/activities/{id}/export', [ActivityController::class, 'exportAttendance'])->name('activities.export');
+
     Route::middleware(['admin'])->group(function () {
         // admin-only routes
         Route::resource('departments', \App\Http\Controllers\DepartmentController::class);

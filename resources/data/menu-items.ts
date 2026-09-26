@@ -36,11 +36,30 @@ export const MENU_ITEMS: MenuItemType[] = [
         icon: 'tabler:certificate',
         url: '/credits/student',
     },
+    {
+        key: 'student_activities',
+        label: 'กิจกรรมนักศึกษา',
+        icon: 'tabler:calendar-event',
+        url: '/student/activities',
+    },
+    {
+        key: 'student_activity_history',
+        label: 'ประวัติและชั่วโมงกิจกรรม',
+        icon: 'tabler:award',
+        url: '/student/activity-history',
+    },
 
     {
         key: 'management',
         label: 'การจัดการ',
         isTitle: true,
+        roles: ['admin', 'teacher'],
+    },
+    {
+        key: 'activity_management',
+        label: 'จัดการกิจกรรมนักศึกษา',
+        icon: 'tabler:calendar-check',
+        url: '/activities',
         roles: ['admin', 'teacher'],
     },
     {

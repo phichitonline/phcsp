@@ -14,7 +14,7 @@ const AboutPage = () => {
 
             <Container fluid className="py-2">
                 <Row className="justify-content-center">
-                    <Col lg={11} xl={10}>
+                    <Col lg={12} xl={12}>
                         {/* Hero Header Card */}
                         <Card className="border-0 shadow-sm rounded-4 overflow-hidden mb-4">
                             <div

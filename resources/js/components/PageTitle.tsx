@@ -1,13 +1,24 @@
 import { Head, Link } from '@inertiajs/react';
 import IconifyIcon from './wrappers/IconifyIcon';
 
-const PageTitle = ({ title, subTitle, rightContent }: { title: string; subTitle?: string; rightContent?: React.ReactNode }) => {
+const PageTitle = ({
+    title,
+    subTitle,
+    rightContent,
+    titleSuffix,
+}: {
+    title: string;
+    subTitle?: string;
+    rightContent?: React.ReactNode;
+    titleSuffix?: React.ReactNode;
+}) => {
     return (
         <>
             <Head title={title} />
             <div className="page-title-head d-flex align-items-sm-center flex-sm-row flex-column gap-2">
-                <div className="flex-grow-1">
+                <div className="flex-grow-1 d-flex align-items-center gap-2 flex-wrap">
                     <h4 className="fs-18 fw-semibold mb-0">{title}</h4>
+                    {titleSuffix}
                 </div>
                 <div className="text-end">
                     {rightContent ? rightContent : (

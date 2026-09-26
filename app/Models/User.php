@@ -86,6 +86,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Relationship: User has many ActivityRegistrations
+     */
+    public function activityRegistrations()
+    {
+        return $this->hasMany(ActivityRegistration::class);
+    }
+
+    /**
+     * Relationship: User has created many Activities
+     */
+    public function createdActivities()
+    {
+        return $this->hasMany(Activity::class, 'created_by');
+    }
+
+    /**
      * Check if user is an administrator
      */
     public function isAdmin(): bool
