@@ -165,7 +165,7 @@ const AboutPage = () => {
                                     </p>
                                     <div className="d-flex flex-wrap justify-content-center gap-2 my-3">
                                         <Badge bg="primary" className="px-3 py-2 rounded-pill fw-normal fs-12">
-                                            เวอร์ชันระบบ: 2.1 (PHCSP 2026)
+                                            เวอร์ชันระบบ: 1.1 (PHCSP 2026)
                                         </Badge>
                                         <Badge bg="secondary" className="px-3 py-2 rounded-pill fw-normal fs-12">
                                             สถาบันพระบรมราชชนก

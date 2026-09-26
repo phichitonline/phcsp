@@ -30,14 +30,15 @@ class ThaiDAuthController extends Controller
         try {
             $thaidUser = Socialite::driver('thaid')->user();
         } catch (\Exception $e) {
-            return redirect('/auth/login')->withErrors(['error' => 'การเข้าสู่ระบบด้วย ThaiD ล้มเหลว กรุณาลองใหม่อีกครั้ง']);
+            dd($e->getMessage(), $e->getTraceAsString());
+            //return redirect('/auth/login')->withErrors(['error' => 'การเข้าสู่ระบบด้วย ThaiD ล้มเหลว กรุณาลองใหม่อีกครั้ง']);
         }
 
         // Find existing user by ThaiD ID
         $user = User::where('thaid_id', $thaidUser->getId())->first();
 
         $isNewUser = false;
-
+        
         if (!$user) {
             // Create a new user
             $user = User::create([
@@ -46,6 +47,7 @@ class ThaiDAuthController extends Controller
                 'password' => bcrypt(\Illuminate\Support\Str::random(16)),
                 'thaid_id' => $thaidUser->getId(),
                 'role' => 'guest', // default role
+                'is_active' => 1,
             ]);
             $isNewUser = true;
         }
@@ -58,9 +60,9 @@ class ThaiDAuthController extends Controller
         Auth::login($user);
 
         // Redirect to complete registration if department is not set
-        if (!$user->department_id) {
+        /*if (!$user->department_id) {
             return redirect()->route('complete.registration');
-        }
+        }*/
 
         return redirect()->intended('/');
     }
