@@ -263,7 +263,7 @@ const UpcomingActivitiesSection: React.FC<Props> = ({ activities = [], totalCoun
                                                 </span>
                                             </div>
                                             <div className="d-flex align-items-center justify-content-between gap-2">
-                                                <div className="d-flex align-items-center gap-1.5">
+                                                <div className="d-flex align-items-center gap-2">
                                                     <IconifyIcon icon="tabler:users" className="text-info flex-shrink-0 fs-15" />
                                                     <span>ผู้เข้าร่วม:</span>
                                                 </div>
