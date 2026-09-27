@@ -28,6 +28,7 @@ class StudentProfile extends Model
         'line_id',
         'faculty',
         'major',
+        'curriculum_id',
         'academic_year',
         'class_year',
         'advisor_name',
@@ -46,6 +47,7 @@ class StudentProfile extends Model
     protected $casts = [
         'birth_date' => 'date',
         'gpa' => 'float',
+        'curriculum_id' => 'integer',
     ];
 
     /**
@@ -55,6 +57,15 @@ class StudentProfile extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * Relationship: StudentProfile belongs to Curriculum
+     */
+    public function curriculum()
+    {
+        return $this->belongsTo(Curriculum::class, 'curriculum_id');
+    }
+
 
     /**
      * Helper to get full Thai name

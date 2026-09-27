@@ -15,11 +15,13 @@ import {
     Nav,
     Tab
 } from 'react-bootstrap';
+import Select from 'react-select';
 import MainLayout from '@/layouts/MainLayout';
 import PageTitle from '@/components/PageTitle';
 import IconifyIcon from '@/components/wrappers/IconifyIcon';
 import Swal from 'sweetalert2';
 import avatarDefault from '@/images/users/avatar-2.jpg';
+import ThaiDatePicker from '@/components/ThaiDatePicker';
 
 export interface StudentProfileItem {
     id?: number | null;
@@ -203,6 +205,78 @@ const StudentManagementPage = ({
         avatar_path: null,
         updated_at: null,
     });
+
+    // Select2 Options
+    const profileStatusOptions = [
+        { value: 'all', label: 'สถานะประวัติ: ทั้งหมด' },
+        { value: 'updated', label: '✓ อัปเดตแล้ว' },
+        { value: 'pending', label: '⏳ ยังไม่อัปเดต' },
+    ];
+
+    const docStatusOptions = [
+        { value: 'all', label: 'สถานะเอกสาร: ทั้งหมด' },
+        { value: 'completed', label: '✓ ครบถ้วน (27 ข้อ)' },
+        { value: 'in_progress', label: '⏳ กำลังดำเนินการ' },
+        { value: 'not_started', label: '✕ ยังไม่อัปโหลด' },
+    ];
+
+    const classYearFilterOptions = [
+        { value: 'all', label: 'ชั้นปี: ทั้งหมด' },
+        { value: 'ปีที่ 1', label: 'ชั้นปีที่ 1' },
+        { value: 'ปีที่ 2', label: 'ชั้นปีที่ 2' },
+        { value: 'ปีที่ 3', label: 'ชั้นปีที่ 3' },
+        { value: 'ปีที่ 4', label: 'ชั้นปีที่ 4' },
+    ];
+
+    const prefixOptions = [
+        { value: 'นาย', label: 'นาย' },
+        { value: 'นางสาว', label: 'นางสาว' },
+        { value: 'นาง', label: 'นาง' },
+        { value: 'ดร.', label: 'ดร.' },
+    ];
+
+    const genderOptions = [
+        { value: 'ชาย', label: 'ชาย' },
+        { value: 'หญิง', label: 'หญิง' },
+        { value: 'อื่นๆ', label: 'อื่นๆ' },
+    ];
+
+    const bloodGroupOptions = [
+        { value: 'A', label: 'A' },
+        { value: 'B', label: 'B' },
+        { value: 'AB', label: 'AB' },
+        { value: 'O', label: 'O' },
+    ];
+
+    const majorOptions = useMemo(() => {
+        if (curriculums && curriculums.length > 0) {
+            return curriculums.map((c) => ({
+                value: c.name,
+                label: c.code ? `[${c.code}] ${c.name}` : c.name,
+            }));
+        }
+        return [
+            { value: 'หลักสูตรสาธารณสุขศาสตรมหาบัณฑิต (ส.ม.)', label: 'หลักสูตรสาธารณสุขศาสตรมหาบัณฑิต (ส.ม.)' },
+            { value: 'สาธารณสุขศาสตรบัณฑิต (สาธารณสุขชุมชน)', label: 'สาธารณสุขศาสตรบัณฑิต (สาธารณสุขชุมชน)' },
+            { value: 'สาธารณสุขศาสตรบัณฑิต (ทันตสาธารณสุข)', label: 'สาธารณสุขศาสตรบัณฑิต (ทันตสาธารณสุข)' },
+            { value: 'การแพทย์แผนไทยบัณฑิต', label: 'การแพทย์แผนไทยบัณฑิต' },
+        ];
+    }, [curriculums]);
+
+    const classYearOptions = [
+        { value: 'ชั้นปีที่ 1', label: 'ชั้นปีที่ 1' },
+        { value: 'ชั้นปีที่ 2', label: 'ชั้นปีที่ 2' },
+        { value: 'ชั้นปีที่ 3', label: 'ชั้นปีที่ 3' },
+        { value: 'ชั้นปีที่ 4', label: 'ชั้นปีที่ 4' },
+        { value: 'สำเร็จการศึกษา', label: 'สำเร็จการศึกษา' },
+    ];
+
+    const studentStatusOptions = [
+        { value: 'กำลังศึกษา', label: 'กำลังศึกษา' },
+        { value: 'รักษาสภาพ', label: 'รักษาสภาพ' },
+        { value: 'สำเร็จการศึกษา', label: 'สำเร็จการศึกษา' },
+        { value: 'พ้นสภาพ', label: 'พ้นสภาพ' },
+    ];
 
     // Handle open Edit Modal
     const handleOpenEdit = (student: StudentItem) => {
@@ -490,44 +564,35 @@ const StudentManagementPage = ({
 
                         {/* Filter Profile Status */}
                         <Col lg={2} sm={4}>
-                            <Form.Select
-                                value={filterProfileStatus}
-                                onChange={(e) => setFilterProfileStatus(e.target.value)}
-                                className="fs-13"
-                            >
-                                <option value="all">สถานะประวัติ: ทั้งหมด</option>
-                                <option value="updated">✓ อัปเดตแล้ว</option>
-                                <option value="pending">⏳ ยังไม่อัปเดต</option>
-                            </Form.Select>
+                            <Select
+                                classNamePrefix="react-select"
+                                options={profileStatusOptions}
+                                value={profileStatusOptions.find((opt) => opt.value === filterProfileStatus) || profileStatusOptions[0]}
+                                onChange={(opt: any) => setFilterProfileStatus(opt ? opt.value : 'all')}
+                                isClearable={false}
+                            />
                         </Col>
 
                         {/* Filter Document Status */}
                         <Col lg={2} sm={4}>
-                            <Form.Select
-                                value={filterDocStatus}
-                                onChange={(e) => setFilterDocStatus(e.target.value)}
-                                className="fs-13"
-                            >
-                                <option value="all">สถานะเอกสาร: ทั้งหมด</option>
-                                <option value="completed">✓ ครบถ้วน (27 ข้อ)</option>
-                                <option value="in_progress">⏳ กำลังดำเนินการ</option>
-                                <option value="not_started">✕ ยังไม่อัปโหลด</option>
-                            </Form.Select>
+                            <Select
+                                classNamePrefix="react-select"
+                                options={docStatusOptions}
+                                value={docStatusOptions.find((opt) => opt.value === filterDocStatus) || docStatusOptions[0]}
+                                onChange={(opt: any) => setFilterDocStatus(opt ? opt.value : 'all')}
+                                isClearable={false}
+                            />
                         </Col>
 
                         {/* Filter Class Year */}
                         <Col lg={2} sm={4}>
-                            <Form.Select
-                                value={filterClassYear}
-                                onChange={(e) => setFilterClassYear(e.target.value)}
-                                className="fs-13"
-                            >
-                                <option value="all">ชั้นปี: ทั้งหมด</option>
-                                <option value="ปีที่ 1">ชั้นปีที่ 1</option>
-                                <option value="ปีที่ 2">ชั้นปีที่ 2</option>
-                                <option value="ปีที่ 3">ชั้นปีที่ 3</option>
-                                <option value="ปีที่ 4">ชั้นปีที่ 4</option>
-                            </Form.Select>
+                            <Select
+                                classNamePrefix="react-select"
+                                options={classYearFilterOptions}
+                                value={classYearFilterOptions.find((opt) => opt.value === filterClassYear) || classYearFilterOptions[0]}
+                                onChange={(opt: any) => setFilterClassYear(opt ? opt.value : 'all')}
+                                isClearable={false}
+                            />
                         </Col>
 
                         {/* Reset Filters */}
@@ -842,15 +907,14 @@ const StudentManagementPage = ({
                                         <Col md={3}>
                                             <Form.Group controlId="editPrefix">
                                                 <Form.Label className="fs-13 fw-semibold text-dark">คำนำหน้า</Form.Label>
-                                                <Form.Select
-                                                    value={formData.title_prefix || 'นาย'}
-                                                    onChange={(e) => setFormData({ ...formData, title_prefix: e.target.value })}
-                                                >
-                                                    <option value="นาย">นาย</option>
-                                                    <option value="นางสาว">นางสาว</option>
-                                                    <option value="นาง">นาง</option>
-                                                    <option value="ดร.">ดร.</option>
-                                                </Form.Select>
+                                                <Select
+                                                    classNamePrefix="react-select"
+                                                    options={prefixOptions}
+                                                    value={prefixOptions.find((opt) => opt.value === formData.title_prefix) || prefixOptions[0]}
+                                                    onChange={(opt: any) => setFormData({ ...formData, title_prefix: opt ? opt.value : 'นาย' })}
+                                                    menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                                    styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                                />
                                             </Form.Group>
                                         </Col>
 
@@ -882,7 +946,7 @@ const StudentManagementPage = ({
                                             </Form.Group>
                                         </Col>
 
-                                        <Col md={6}>
+                                        <Col md={4}>
                                             <Form.Group controlId="editStudentCode">
                                                 <Form.Label className="fs-13 fw-semibold text-dark">รหัสนักศึกษา</Form.Label>
                                                 <Form.Control
@@ -894,7 +958,7 @@ const StudentManagementPage = ({
                                             </Form.Group>
                                         </Col>
 
-                                        <Col md={6}>
+                                        <Col md={4}>
                                             <Form.Group controlId="editNationalId">
                                                 <Form.Label className="fs-13 fw-semibold text-dark">เลขประจำตัวประชาชน</Form.Label>
                                                 <Form.Control
@@ -907,31 +971,41 @@ const StudentManagementPage = ({
                                         </Col>
 
                                         <Col md={4}>
+                                            <Form.Group controlId="editBirthDate">
+                                                <Form.Label className="fs-13 fw-semibold text-dark">วัน/เดือน/ปี เกิด</Form.Label>
+                                                <ThaiDatePicker
+                                                    value={formData.birth_date || ''}
+                                                    onChange={(val) => setFormData({ ...formData, birth_date: val })}
+                                                    placeholder="วว/ดด/ปปปป (พ.ศ.)"
+                                                />
+                                            </Form.Group>
+                                        </Col>
+
+                                        <Col md={4}>
                                             <Form.Group controlId="editGender">
                                                 <Form.Label className="fs-13 fw-semibold text-dark">เพศ</Form.Label>
-                                                <Form.Select
-                                                    value={formData.gender || 'ชาย'}
-                                                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                                                >
-                                                    <option value="ชาย">ชาย</option>
-                                                    <option value="หญิง">หญิง</option>
-                                                    <option value="อื่นๆ">อื่นๆ</option>
-                                                </Form.Select>
+                                                <Select
+                                                    classNamePrefix="react-select"
+                                                    options={genderOptions}
+                                                    value={genderOptions.find((opt) => opt.value === formData.gender) || genderOptions[0]}
+                                                    onChange={(opt: any) => setFormData({ ...formData, gender: opt ? opt.value : 'ชาย' })}
+                                                    menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                                    styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                                />
                                             </Form.Group>
                                         </Col>
 
                                         <Col md={4}>
                                             <Form.Group controlId="editBloodGroup">
                                                 <Form.Label className="fs-13 fw-semibold text-dark">หมู่โลหิต</Form.Label>
-                                                <Form.Select
-                                                    value={formData.blood_group || 'B'}
-                                                    onChange={(e) => setFormData({ ...formData, blood_group: e.target.value })}
-                                                >
-                                                    <option value="A">A</option>
-                                                    <option value="B">B</option>
-                                                    <option value="AB">AB</option>
-                                                    <option value="O">O</option>
-                                                </Form.Select>
+                                                <Select
+                                                    classNamePrefix="react-select"
+                                                    options={bloodGroupOptions}
+                                                    value={bloodGroupOptions.find((opt) => opt.value === formData.blood_group) || bloodGroupOptions[1]}
+                                                    onChange={(opt: any) => setFormData({ ...formData, blood_group: opt ? opt.value : 'B' })}
+                                                    menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                                    styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                                />
                                             </Form.Group>
                                         </Col>
 
@@ -965,47 +1039,30 @@ const StudentManagementPage = ({
                                         <Col md={6}>
                                             <Form.Group controlId="editMajor">
                                                 <Form.Label className="fs-13 fw-semibold text-dark">สาขาวิชา / หลักสูตร</Form.Label>
-                                                <Form.Select
-                                                    value={formData.major || ''}
-                                                    onChange={(e) => setFormData({ ...formData, major: e.target.value })}
-                                                >
-                                                    <option value="">-- เลือกสาขาวิชา / หลักสูตร --</option>
-                                                    {curriculums && curriculums.length > 0 ? (
-                                                        curriculums.map((c) => (
-                                                            <option key={c.id} value={c.name}>
-                                                                {c.code ? `[${c.code}] ` : ''}{c.name}
-                                                            </option>
-                                                        ))
-                                                    ) : (
-                                                        <>
-                                                            <option value="หลักสูตรสาธารณสุขศาสตรมหาบัณฑิต (ส.ม.)">หลักสูตรสาธารณสุขศาสตรมหาบัณฑิต (ส.ม.)</option>
-                                                            <option value="สาธารณสุขศาสตรบัณฑิต (สาธารณสุขชุมชน)">สาธารณสุขศาสตรบัณฑิต (สาธารณสุขชุมชน)</option>
-                                                            <option value="สาธารณสุขศาสตรบัณฑิต (ทันตสาธารณสุข)">สาธารณสุขศาสตรบัณฑิต (ทันตสาธารณสุข)</option>
-                                                            <option value="การแพทย์แผนไทยบัณฑิต">การแพทย์แผนไทยบัณฑิต</option>
-                                                        </>
-                                                    )}
-                                                    {formData.major &&
-                                                        (!curriculums || !curriculums.some(c => c.name === formData.major)) &&
-                                                        !["หลักสูตรสาธารณสุขศาสตรมหาบัณฑิต (ส.ม.)", "สาธารณสุขศาสตรบัณฑิต (สาธารณสุขชุมชน)", "สาธารณสุขศาสตรบัณฑิต (ทันตสาธารณสุข)", "การแพทย์แผนไทยบัณฑิต"].includes(formData.major) && (
-                                                            <option value={formData.major}>{formData.major}</option>
-                                                    )}
-                                                </Form.Select>
+                                                <Select
+                                                    classNamePrefix="react-select"
+                                                    options={majorOptions}
+                                                    value={majorOptions.find((opt) => opt.value === formData.major) || (formData.major ? { value: formData.major, label: formData.major } : null)}
+                                                    onChange={(opt: any) => setFormData({ ...formData, major: opt ? opt.value : '' })}
+                                                    placeholder="-- เลือกสาขาวิชา / หลักสูตร --"
+                                                    menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                                    styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                                    isClearable
+                                                />
                                             </Form.Group>
                                         </Col>
 
                                         <Col md={4}>
                                             <Form.Group controlId="editClassYear">
                                                 <Form.Label className="fs-13 fw-semibold text-dark">ชั้นปี</Form.Label>
-                                                <Form.Select
-                                                    value={formData.class_year || 'ชั้นปีที่ 2'}
-                                                    onChange={(e) => setFormData({ ...formData, class_year: e.target.value })}
-                                                >
-                                                    <option value="ชั้นปีที่ 1">ชั้นปีที่ 1</option>
-                                                    <option value="ชั้นปีที่ 2">ชั้นปีที่ 2</option>
-                                                    <option value="ชั้นปีที่ 3">ชั้นปีที่ 3</option>
-                                                    <option value="ชั้นปีที่ 4">ชั้นปีที่ 4</option>
-                                                    <option value="สำเร็จการศึกษา">สำเร็จการศึกษา</option>
-                                                </Form.Select>
+                                                <Select
+                                                    classNamePrefix="react-select"
+                                                    options={classYearOptions}
+                                                    value={classYearOptions.find((opt) => opt.value === formData.class_year) || classYearOptions[1]}
+                                                    onChange={(opt: any) => setFormData({ ...formData, class_year: opt ? opt.value : 'ชั้นปีที่ 2' })}
+                                                    menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                                    styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                                />
                                             </Form.Group>
                                         </Col>
 
@@ -1048,15 +1105,14 @@ const StudentManagementPage = ({
                                         <Col md={6}>
                                             <Form.Group controlId="editStudentStatus">
                                                 <Form.Label className="fs-13 fw-semibold text-dark">สถานภาพนักศึกษา</Form.Label>
-                                                <Form.Select
-                                                    value={formData.student_status || 'กำลังศึกษา'}
-                                                    onChange={(e) => setFormData({ ...formData, student_status: e.target.value })}
-                                                >
-                                                    <option value="กำลังศึกษา">กำลังศึกษา</option>
-                                                    <option value="รักษาสภาพ">รักษาสภาพ</option>
-                                                    <option value="สำเร็จการศึกษา">สำเร็จการศึกษา</option>
-                                                    <option value="พ้นสภาพ">พ้นสภาพ</option>
-                                                </Form.Select>
+                                                <Select
+                                                    classNamePrefix="react-select"
+                                                    options={studentStatusOptions}
+                                                    value={studentStatusOptions.find((opt) => opt.value === formData.student_status) || studentStatusOptions[0]}
+                                                    onChange={(opt: any) => setFormData({ ...formData, student_status: opt ? opt.value : 'กำลังศึกษา' })}
+                                                    menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                                    styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                                />
                                             </Form.Group>
                                         </Col>
 

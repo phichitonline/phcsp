@@ -19,9 +19,18 @@ class CreditTrackingController extends Controller
     private function calculateStudentCreditSummary(User $user, ?Curriculum $curriculum = null): array
     {
         if (!$curriculum) {
-            $curriculum = Curriculum::where('is_active', true)->first()
-                ?? Curriculum::first();
+            if ($user->studentProfile?->curriculum_id) {
+                $curriculum = Curriculum::find($user->studentProfile->curriculum_id);
+            } elseif ($user->studentProfile?->major) {
+                $curriculum = Curriculum::where('name', $user->studentProfile->major)->first()
+                    ?? Curriculum::where('name', 'like', '%' . $user->studentProfile->major . '%')->first();
+            }
+            if (!$curriculum) {
+                $curriculum = Curriculum::where('is_active', true)->first()
+                    ?? Curriculum::first();
+            }
         }
+
 
         $totalRequired = $curriculum ? $curriculum->total_credits : 36;
         $coreRequired = $curriculum ? $curriculum->core_credits_required : 15;
@@ -112,8 +121,17 @@ class CreditTrackingController extends Controller
         $currentUser = auth()->user();
         $isAdmin = $currentUser && $currentUser->role === 'admin';
 
-        $curriculum = Curriculum::with('courses')->where('is_active', true)->first()
-            ?? Curriculum::with('courses')->first();
+        $curriculums = Curriculum::withCount('courses')->orderBy('id', 'asc')->get();
+        $selectedCurriculumId = $request->curriculum_id ?? 'all';
+
+        $curriculum = null;
+        if ($selectedCurriculumId !== 'all') {
+            $curriculum = Curriculum::with('courses')->find($selectedCurriculumId);
+        }
+        if (!$curriculum) {
+            $curriculum = Curriculum::with('courses')->where('is_active', true)->first()
+                ?? Curriculum::with('courses')->first();
+        }
 
         // รายการปีการศึกษาที่มีในระบบ
         $academicYears = StudentProfile::select('academic_year')
@@ -129,13 +147,28 @@ class CreditTrackingController extends Controller
 
         // ดึงนักศึกษาทั้งหมด
         $studentsQuery = User::with([
-            'studentProfile',
+            'studentProfile.curriculum',
             'courseGrades.course',
         ])
         ->where(function ($q) {
             $q->where('role', '!=', 'admin')
               ->orWhereHas('studentProfile');
         });
+
+        // Filter ตามหลักสูตร
+        if ($request->filled('curriculum_id') && $request->curriculum_id !== 'all') {
+            $curId = $request->curriculum_id;
+            $curTarget = Curriculum::find($curId);
+            $studentsQuery->whereHas('studentProfile', function ($q) use ($curId, $curTarget) {
+                $q->where(function ($sq) use ($curId, $curTarget) {
+                    $sq->where('curriculum_id', $curId);
+                    if ($curTarget) {
+                        $sq->orWhere('major', $curTarget->name)
+                           ->orWhere('major', $curTarget->code);
+                    }
+                });
+            });
+        }
 
         // Filter ตามปีการศึกษา
         if ($request->filled('academic_year') && $request->academic_year !== 'all') {
@@ -170,7 +203,8 @@ class CreditTrackingController extends Controller
         $sumProgressPercent = 0;
 
         foreach ($allStudents as $student) {
-            $summary = $this->calculateStudentCreditSummary($student, $curriculum);
+            $calcCurriculum = ($selectedCurriculumId !== 'all') ? $curriculum : null;
+            $summary = $this->calculateStudentCreditSummary($student, $calcCurriculum);
 
             // Filter ตามสถานะหน่วยกิต
             if ($request->filled('credit_status')) {
@@ -204,6 +238,8 @@ class CreditTrackingController extends Controller
         $avgProgress = $totalStudents > 0 ? round($sumProgressPercent / $totalStudents, 1) : 0;
 
         return Inertia::render('credits/index', [
+            'curriculums' => $curriculums,
+            'selected_curriculum_id' => (string) $selectedCurriculumId,
             'curriculum' => $curriculum,
             'academic_years' => $academicYears,
             'selected_year' => $request->academic_year ?? 'all',
@@ -246,10 +282,22 @@ class CreditTrackingController extends Controller
 
         $student = User::with('studentProfile')->findOrFail($targetUserId);
 
-        $curriculum = Curriculum::with('courses')->where('is_active', true)->first()
-            ?? Curriculum::with('courses')->first();
+        // ค้นหาหลักสูตรของนักศึกษาคนนี้จาก curriculum_id หรือ major
+        $curriculum = null;
+        if ($student->studentProfile?->curriculum_id) {
+            $curriculum = Curriculum::with('courses')->find($student->studentProfile->curriculum_id);
+        }
+        if (!$curriculum && $student->studentProfile?->major) {
+            $curriculum = Curriculum::with('courses')->where('name', $student->studentProfile->major)->first()
+                ?? Curriculum::with('courses')->where('name', 'like', '%' . $student->studentProfile->major . '%')->first();
+        }
+        if (!$curriculum) {
+            $curriculum = Curriculum::with('courses')->where('is_active', true)->first()
+                ?? Curriculum::with('courses')->first();
+        }
 
         $allCourses = $curriculum ? $curriculum->courses : Course::where('is_active', true)->get();
+
 
         // ดึงผลการเรียนทั้งหมดของนักศึกษา
         $grades = StudentCourseGrade::with('course')
@@ -371,18 +419,13 @@ class CreditTrackingController extends Controller
             abort(403, 'เฉพาะผู้ดูแลระบบและอาจารย์ผู้สอนเท่านั้นที่สามารถเข้าถึงหน้านี้ได้');
         }
 
-        $curriculum = Curriculum::with('courses')->where('is_active', true)->first()
-            ?? Curriculum::with('courses')->first();
-
-        $students = User::with('studentProfile')
+        $students = User::with(['studentProfile.curriculum'])
             ->where(function ($q) {
                 $q->where('role', '!=', 'admin')
                   ->orWhereHas('studentProfile');
             })
             ->orderBy('id', 'asc')
             ->get();
-
-        $courses = $curriculum ? $curriculum->courses : Course::where('is_active', true)->get();
 
         // รายการปีการศึกษา
         $academicYears = StudentProfile::select('academic_year')
@@ -396,36 +439,106 @@ class CreditTrackingController extends Controller
             $academicYears = ['2567', '2566', '2565'];
         }
 
-        // หากมีการเลือกนักศึกษาคนใดคนหนึ่ง ให้โหลดเกรดของนักศึกษาคนนั้น
+        // ค้นหานักศึกษาที่เลือก
         $selectedStudentId = $request->student_id ? (int)$request->student_id : null;
+        if (!$selectedStudentId && $students->isNotEmpty()) {
+            $selectedStudentId = $students->first()->id;
+        }
+
+        $selectedStudent = $selectedStudentId ? $students->firstWhere('id', $selectedStudentId) : null;
+
+        // ดึงหลักสูตรของนักศึกษาที่เลือก
+        $curriculum = null;
+        if ($selectedStudent) {
+            if ($selectedStudent->studentProfile?->curriculum_id) {
+                $curriculum = Curriculum::with('courses')->find($selectedStudent->studentProfile->curriculum_id);
+            }
+            if (!$curriculum && $selectedStudent->studentProfile?->major) {
+                $curriculum = Curriculum::with('courses')->where('name', $selectedStudent->studentProfile->major)->first()
+                    ?? Curriculum::with('courses')->where('code', $selectedStudent->studentProfile->major)->first();
+            }
+        }
+        if (!$curriculum) {
+            $curriculum = Curriculum::with('courses')->where('is_active', true)->first()
+                ?? Curriculum::with('courses')->first();
+        }
+
+        // ดึงรายวิชาตามหลักสูตรของนักศึกษา และรายวิชาที่นักศึกษาลงทะเบียนไว้
+        $courses = collect();
+        if ($curriculum && $curriculum->courses) {
+            $courses = $curriculum->courses;
+        }
+
         $studentGrades = [];
         if ($selectedStudentId) {
-            $studentGrades = StudentCourseGrade::where('user_id', $selectedStudentId)->get()->keyBy('course_id');
+            // โหลดผลการเรียนและรายวิชาที่ลงทะเบียนไว้ของนักศึกษาคนนี้
+            $registeredGrades = StudentCourseGrade::where('user_id', $selectedStudentId)
+                ->with('course')
+                ->get();
+            $studentGrades = $registeredGrades->keyBy('course_id');
+
+            // หากมีวิชาที่นักศึกษาลงทะเบียนไว้นอกเหนือจากในหลักสูตร ให้นำมารวมด้วย
+            $registeredCourses = $registeredGrades->map(fn($g) => $g->course)->filter();
+            $courses = $courses->concat($registeredCourses)->unique('id')->sortBy('course_code')->values();
+        }
+
+        // รายวิชาทั้งหมดในระบบ (สำหรับโหมดกรอกตามรายวิชา)
+        $allCourses = Course::with('curriculum')->where('is_active', true)->orderBy('course_code')->get();
+        if ($allCourses->isEmpty()) {
+            $allCourses = Course::with('curriculum')->orderBy('course_code')->get();
         }
 
         // หากเลือกโหมดตามรายวิชา
         $selectedCourseId = $request->course_id ? (int)$request->course_id : null;
+        if (!$selectedCourseId && $allCourses->isNotEmpty()) {
+            $selectedCourseId = $allCourses->first()->id;
+        }
+
+        $selectedYear = $request->has('academic_year') ? $request->academic_year : 'all';
+        $selectedSemester = $request->has('semester') ? $request->semester : 'all';
+
+        // ดึงเฉพาะนักศึกษาที่ลงทะเบียนในรายวิชานี้ (only students who have registered for this course)
+        $courseStudents = collect();
         $courseGrades = [];
         if ($selectedCourseId) {
-            $q = StudentCourseGrade::where('course_id', $selectedCourseId);
-            if ($request->filled('academic_year')) {
-                $q->where('academic_year', $request->academic_year);
+            $courseStudentsQuery = User::with(['studentProfile.curriculum'])
+                ->where(function ($q) {
+                    $q->where('role', '!=', 'admin')
+                      ->orWhereHas('studentProfile');
+                })
+                ->whereHas('courseGrades', function ($cg) use ($selectedCourseId, $selectedYear, $selectedSemester) {
+                    $cg->where('course_id', $selectedCourseId);
+                    if ($selectedYear !== 'all') {
+                        $cg->where('academic_year', $selectedYear);
+                    }
+                    if ($selectedSemester !== 'all') {
+                        $cg->where('semester', (int)$selectedSemester);
+                    }
+                });
+
+            $courseStudents = $courseStudentsQuery->orderBy('id', 'asc')->get();
+
+            $qGrades = StudentCourseGrade::where('course_id', $selectedCourseId);
+            if ($selectedYear !== 'all') {
+                $qGrades->where('academic_year', $selectedYear);
             }
-            if ($request->filled('semester')) {
-                $q->where('semester', (int)$request->semester);
+            if ($selectedSemester !== 'all') {
+                $qGrades->where('semester', (int)$selectedSemester);
             }
-            $courseGrades = $q->get()->keyBy('user_id');
+            $courseGrades = $qGrades->get()->keyBy('user_id');
         }
 
         return Inertia::render('credits/grade-entry', [
             'curriculum' => $curriculum,
             'students' => $students,
+            'course_students' => $courseStudents,
             'courses' => $courses,
+            'all_courses' => $allCourses,
             'academic_years' => $academicYears,
             'selected_student_id' => $selectedStudentId,
             'selected_course_id' => $selectedCourseId,
-            'selected_year' => $request->academic_year ?? ($academicYears[0] ?? '2567'),
-            'selected_semester' => (int)($request->semester ?? 1),
+            'selected_year' => $selectedYear,
+            'selected_semester' => $selectedSemester,
             'student_grades' => $studentGrades,
             'course_grades' => $courseGrades,
             'mode' => $request->mode ?? 'by_student', // by_student หรือ by_course
@@ -462,10 +575,23 @@ class CreditTrackingController extends Controller
                 $semester = isset($item['semester']) ? (int)$item['semester'] : 1;
 
                 if (empty($gradeStr)) {
-                    // หากเว้นว่าง ให้ลบรายการเกรดออกหากมีอยู่เดิม
-                    StudentCourseGrade::where('user_id', $student->id)
-                        ->where('course_id', $courseId)
-                        ->delete();
+                    // หากยังไม่ได้ระบุเกรด ให้อัปเดตข้อมูลภาคการศึกษาไว้โดยสถานะยังไม่ผ่านเกรด (ไม่ลบวิชาที่ลงทะเบียน)
+                    StudentCourseGrade::updateOrCreate(
+                        [
+                            'user_id' => $student->id,
+                            'course_id' => $courseId,
+                        ],
+                        [
+                            'student_profile_id' => $studentProfileId,
+                            'academic_year' => $academicYear,
+                            'semester' => $semester,
+                            'grade' => null,
+                            'grade_point' => null,
+                            'is_passed' => false,
+                            'recorded_by_user_id' => $currentUser->id,
+                            'remark' => $item['remark'] ?? null,
+                        ]
+                    );
                     continue;
                 }
 
@@ -513,8 +639,6 @@ class CreditTrackingController extends Controller
 
         $request->validate([
             'course_id' => 'required|exists:courses,id',
-            'academic_year' => 'required|string',
-            'semester' => 'required|integer|min:1|max:3',
             'grades' => 'required|array',
             'grades.*.user_id' => 'required|exists:users,id',
             'grades.*.grade' => 'nullable|string',
@@ -522,34 +646,49 @@ class CreditTrackingController extends Controller
 
         $courseId = $request->course_id;
         $academicYear = $request->academic_year;
-        $semester = (int)$request->semester;
+        $semester = $request->semester;
 
         DB::transaction(function () use ($request, $courseId, $academicYear, $semester, $currentUser) {
             foreach ($request->grades as $item) {
                 $userId = $item['user_id'];
                 $gradeStr = isset($item['grade']) ? strtoupper(trim($item['grade'])) : null;
+                $student = User::with('studentProfile')->find($userId);
+
+                $existingGrade = StudentCourseGrade::where('user_id', $userId)->where('course_id', $courseId)->first();
+                $itemYear = ($academicYear && $academicYear !== 'all') ? $academicYear : ($existingGrade?->academic_year ?? ($student?->studentProfile?->academic_year ?? '2567'));
+                $itemSem = ($semester && $semester !== 'all') ? (int)$semester : ($existingGrade?->semester ?? 1);
 
                 if (empty($gradeStr)) {
-                    StudentCourseGrade::where('user_id', $userId)
-                        ->where('course_id', $courseId)
-                        ->where('academic_year', $academicYear)
-                        ->where('semester', $semester)
-                        ->delete();
+                    StudentCourseGrade::updateOrCreate(
+                        [
+                            'user_id' => $userId,
+                            'course_id' => $courseId,
+                        ],
+                        [
+                            'student_profile_id' => $student?->studentProfile?->id,
+                            'academic_year' => $itemYear,
+                            'semester' => $itemSem,
+                            'grade' => null,
+                            'grade_point' => null,
+                            'is_passed' => false,
+                            'recorded_by_user_id' => $currentUser->id,
+                            'remark' => $item['remark'] ?? null,
+                        ]
+                    );
                     continue;
                 }
 
-                $student = User::with('studentProfile')->find($userId);
                 $eval = StudentCourseGrade::evaluateGrade($gradeStr);
 
                 StudentCourseGrade::updateOrCreate(
                     [
                         'user_id' => $userId,
                         'course_id' => $courseId,
-                        'academic_year' => $academicYear,
-                        'semester' => $semester,
                     ],
                     [
                         'student_profile_id' => $student?->studentProfile?->id,
+                        'academic_year' => $itemYear,
+                        'semester' => $itemSem,
                         'grade' => $gradeStr,
                         'grade_point' => $eval['point'],
                         'is_passed' => $eval['passed'],

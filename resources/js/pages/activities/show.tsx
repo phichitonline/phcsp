@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { Head, Link, useForm, router } from '@inertiajs/react';
 import { Card, CardBody, Col, Row, Button, Form, Badge, Modal, InputGroup, Table, Dropdown } from 'react-bootstrap';
+import Select from 'react-select';
 import MainLayout from '@/layouts/MainLayout';
 import PageTitle from '@/components/PageTitle';
 import IconifyIcon from '@/components/wrappers/IconifyIcon';
 import Swal from 'sweetalert2';
 import { QRCodeSVG } from 'qrcode.react';
+import ThaiDatePicker from '@/components/ThaiDatePicker';
+import LocationMapPickerModal from '@/components/LocationMapPickerModal';
+import { formatThaiDate } from '@/utils/date';
 
 interface RegistrationItem {
     id: number;
@@ -96,8 +100,147 @@ export default function ActivityShow({ activity, registrations, stats, currentDy
     const [showOverrideModal, setShowOverrideModal] = useState(false);
     const [selectedRegistration, setSelectedRegistration] = useState<RegistrationItem | null>(null);
     const [showImportModal, setShowImportModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [showMapPicker, setShowMapPicker] = useState(false);
+    const [isLocatingDevice, setIsLocatingDevice] = useState(false);
+
+    // Edit Activity Form
+    const editForm = useForm({
+        activity_name: activity.activity_name,
+        activity_code: activity.activity_code || '',
+        academic_year: activity.academic_year,
+        semester: activity.semester,
+        activity_type: activity.activity_type,
+        activity_date: activity.activity_date ? activity.activity_date.substring(0, 10) : '',
+        start_time: activity.start_time ? activity.start_time.substring(0, 5) : '',
+        end_time: activity.end_time ? activity.end_time.substring(0, 5) : '',
+        total_hours: activity.total_hours,
+        location_name: activity.location_name || '',
+        latitude: activity.latitude || 14.475685,
+        longitude: activity.longitude || 100.116528,
+        radius_limit: activity.radius_limit || 100,
+        qr_refresh_interval: activity.qr_refresh_interval || 60,
+        description: activity.description || '',
+    });
+
+    const modalYearOptions = [
+        { value: 2569, label: 'ปีการศึกษา 2569' },
+        { value: 2568, label: 'ปีการศึกษา 2568' },
+        { value: 2567, label: 'ปีการศึกษา 2567' },
+        { value: 2566, label: 'ปีการศึกษา 2566' },
+    ];
+
+    const modalSemesterOptions = [
+        { value: 1, label: 'ภาคเรียนที่ 1' },
+        { value: 2, label: 'ภาคเรียนที่ 2' },
+        { value: 3, label: 'ภาคเรียนฤดูร้อน' },
+    ];
+
+    const modalTypeOptions = [
+        { value: 'mandatory', label: 'กิจกรรมบังคับ (ต้องเข้าร่วม)' },
+        { value: 'elective', label: 'กิจกรรมเลือก (สะสมชั่วโมง)' },
+    ];
+
+    const qrIntervalOptions = [
+        { value: 15, label: '15 วินาที (ป้องกันการแชร์ QR สูงสุด)' },
+        { value: 30, label: '30 วินาที' },
+        { value: 45, label: '45 วินาที' },
+        { value: 60, label: '60 วินาที (ค่าแนะนำ 1 นาที)' },
+        { value: 90, label: '90 วินาที' },
+        { value: 120, label: '120 วินาที (2 นาที)' },
+    ];
+
+    const handleOpenEdit = () => {
+        editForm.setData({
+            activity_name: activity.activity_name,
+            activity_code: activity.activity_code || '',
+            academic_year: activity.academic_year,
+            semester: activity.semester,
+            activity_type: activity.activity_type,
+            activity_date: activity.activity_date ? activity.activity_date.substring(0, 10) : '',
+            start_time: activity.start_time ? activity.start_time.substring(0, 5) : '',
+            end_time: activity.end_time ? activity.end_time.substring(0, 5) : '',
+            total_hours: activity.total_hours,
+            location_name: activity.location_name || '',
+            latitude: activity.latitude || 14.475685,
+            longitude: activity.longitude || 100.116528,
+            radius_limit: activity.radius_limit || 100,
+            qr_refresh_interval: activity.qr_refresh_interval || 60,
+            description: activity.description || '',
+        });
+        setShowEditModal(true);
+    };
+
+    const handleFetchCurrentDeviceLocation = () => {
+        if (!navigator.geolocation) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'เบราว์เซอร์ไม่รองรับ GPS',
+                text: 'อุปกรณ์หรือเบราว์เซอร์นี้ไม่รองรับ Geolocation API',
+            });
+            return;
+        }
+
+        setIsLocatingDevice(true);
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                setIsLocatingDevice(false);
+                const lat = parseFloat(pos.coords.latitude.toFixed(6));
+                const lng = parseFloat(pos.coords.longitude.toFixed(6));
+                editForm.setData((prev) => ({
+                    ...prev,
+                    latitude: lat,
+                    longitude: lng,
+                }));
+                Swal.fire({
+                    icon: 'success',
+                    title: 'ดึงพิกัดสำเร็จ!',
+                    html: `พิกัดละติจูด: <b>${lat}</b><br/>พิกัดลองจิจูด: <b>${lng}</b><br/><small class="text-muted">ความแม่นยำประมาณ ${Math.round(pos.coords.accuracy)} เมตร</small>`,
+                    timer: 2500,
+                    showConfirmButton: false,
+                });
+            },
+            (err) => {
+                setIsLocatingDevice(false);
+                let msg = 'ไม่สามารถอ่านพิกัดจากอุปกรณ์ได้';
+                if (err.code === 1) msg = 'กรุณาอนุญาต (Allow) การเข้าถึงตำแหน่ง Location บนเบราว์เซอร์';
+                else if (err.code === 2) msg = 'ไม่พบสัญญาณพิกัด GPS จากอุปกรณ์ในขณะนี้';
+                else if (err.code === 3) msg = 'หมดเวลาเชื่อมต่อการอ่านพิกัด GPS';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'ดึงพิกัดไม่สำเร็จ',
+                    text: msg,
+                });
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    };
+
+    const handleUpdateActivity = (e: React.FormEvent) => {
+        e.preventDefault();
+        editForm.put(`/activities/${activity.id}`, {
+            onSuccess: () => {
+                setShowEditModal(false);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'บันทึกสำเร็จ',
+                    text: 'แก้ไขชื่อและรายละเอียดของกิจกรรมเรียบร้อยแล้ว',
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            },
+            onError: (err) => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'ไม่สามารถบันทึกได้',
+                    text: Object.values(err)[0] as string || 'กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง',
+                });
+            },
+        });
+    };
 
     // Override Form
+
     const overrideForm = useForm({
         registration_id: 0,
         attendance_type: 'full',
@@ -113,6 +256,20 @@ export default function ActivityShow({ activity, registrations, stats, currentDy
         student_codes: '',
         required: true,
     });
+
+    // Select2 Options
+    const statusFilterOptions = [
+        { value: '', label: 'ผลการเข้าร่วมทั้งหมด' },
+        { value: 'full', label: 'เต็มเวลา (ได้ชั่วโมงครบ)' },
+        { value: 'partial', label: 'ไม่เต็มเวลา (คิดตามจริง)' },
+        { value: 'absent', label: 'ยังไม่เช็กอิน / ขาด' },
+    ];
+
+    const attendanceTypeOptions = [
+        { value: 'full', label: 'เต็มเวลา (ได้ชั่วโมงเต็ม)' },
+        { value: 'partial', label: 'ไม่เต็มเวลา (คิดตามจริง)' },
+        { value: 'none', label: 'ไม่ผ่าน / ขาดกิจกรรม' },
+    ];
 
     const handleOpenOverride = (reg: RegistrationItem) => {
         setSelectedRegistration(reg);
@@ -213,7 +370,15 @@ export default function ActivityShow({ activity, registrations, stats, currentDy
                                     </p>
                                 </div>
 
-                                <div className="d-flex gap-2">
+                                <div className="d-flex gap-2 flex-wrap">
+                                    <Button
+                                        variant="soft-warning"
+                                        onClick={handleOpenEdit}
+                                        className="d-flex align-items-center gap-1 shadow-sm text-dark fw-semibold"
+                                        title="แก้ไขชื่อและรายละเอียดของกิจกรรม"
+                                    >
+                                        <IconifyIcon icon="tabler:edit" className="fs-18 text-warning-emphasis" /> แก้ไขข้อมูลกิจกรรม
+                                    </Button>
                                     <Link
                                         href={`/activities/${activity.id}/live`}
                                         target="_blank"
@@ -228,6 +393,7 @@ export default function ActivityShow({ activity, registrations, stats, currentDy
                                         <IconifyIcon icon="tabler:file-spreadsheet" className="fs-18" /> ส่งออก Excel
                                     </a>
                                 </div>
+
                             </div>
 
                             <hr className="border-dashed my-3" />
@@ -364,12 +530,13 @@ export default function ActivityShow({ activity, registrations, stats, currentDy
                         </Col>
 
                         <Col md={3}>
-                            <Form.Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                                <option value="">ผลการเข้าร่วมทั้งหมด</option>
-                                <option value="full">เต็มเวลา (ได้ชั่วโมงครบ)</option>
-                                <option value="partial">ไม่เต็มเวลา (คิดตามจริง)</option>
-                                <option value="absent">ยังไม่เช็กอิน / ขาด</option>
-                            </Form.Select>
+                            <Select
+                                classNamePrefix="react-select"
+                                options={statusFilterOptions}
+                                value={statusFilterOptions.find((opt) => opt.value === statusFilter) || statusFilterOptions[0]}
+                                onChange={(opt: any) => setStatusFilter(opt ? opt.value : '')}
+                                isClearable={false}
+                            />
                         </Col>
 
                         <Col md={4} className="text-md-end">
@@ -539,10 +706,12 @@ export default function ActivityShow({ activity, registrations, stats, currentDy
                             <Col md={6}>
                                 <Form.Group>
                                     <Form.Label className="fw-semibold">สถานะการเข้าร่วม</Form.Label>
-                                    <Form.Select
-                                        value={overrideForm.data.attendance_type}
-                                        onChange={(e) => {
-                                            const type = e.target.value;
+                                    <Select
+                                        classNamePrefix="react-select"
+                                        options={attendanceTypeOptions}
+                                        value={attendanceTypeOptions.find((opt) => opt.value === overrideForm.data.attendance_type)}
+                                        onChange={(opt: any) => {
+                                            const type = opt ? opt.value : 'full';
                                             overrideForm.setData('attendance_type', type as any);
                                             if (type === 'full') {
                                                 overrideForm.setData('actual_hours', activity.total_hours);
@@ -550,11 +719,9 @@ export default function ActivityShow({ activity, registrations, stats, currentDy
                                                 overrideForm.setData('actual_hours', 0);
                                             }
                                         }}
-                                    >
-                                        <option value="full">เต็มเวลา (ได้ชั่วโมงเต็ม)</option>
-                                        <option value="partial">ไม่เต็มเวลา (คิดตามจริง)</option>
-                                        <option value="none">ไม่ผ่าน / ขาดกิจกรรม</option>
-                                    </Form.Select>
+                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                    />
                                 </Form.Group>
                             </Col>
 
@@ -663,6 +830,295 @@ export default function ActivityShow({ activity, registrations, stats, currentDy
                     </Modal.Footer>
                 </Form>
             </Modal>
+
+            {/* Modal: Edit Activity */}
+            <Modal show={showEditModal} onHide={() => setShowEditModal(false)} size="lg" centered>
+
+                <Form onSubmit={handleUpdateActivity}>
+                    <Modal.Header closeButton className="bg-light">
+                        <Modal.Title className="fs-16 d-flex align-items-center gap-2">
+                            <IconifyIcon icon="tabler:edit" className="text-warning fs-20" />
+                            แก้ไขชื่อและรายละเอียดของกิจกรรม
+                        </Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body className="p-4">
+                        <Row className="g-3">
+                            <Col md={8}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold">ชื่อกิจกรรม <span className="text-danger">*</span></Form.Label>
+                                    <Form.Control
+                                        type="text"
+                                        placeholder="ระบุชื่อกิจกรรม..."
+                                        value={editForm.data.activity_name}
+                                        onChange={(e) => editForm.setData('activity_name', e.target.value)}
+                                        isInvalid={!!editForm.errors.activity_name}
+                                        required
+                                    />
+                                    <Form.Control.Feedback type="invalid">{editForm.errors.activity_name}</Form.Control.Feedback>
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={4}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold">รหัสกิจกรรม</Form.Label>
+                                    <Form.Control
+                                        type="text"
+                                        placeholder="เช่น ACT-2569-001"
+                                        value={editForm.data.activity_code}
+                                        onChange={(e) => editForm.setData('activity_code', e.target.value)}
+                                    />
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={4}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold">ปีการศึกษา <span className="text-danger">*</span></Form.Label>
+                                    <Select
+                                        classNamePrefix="react-select"
+                                        options={modalYearOptions}
+                                        value={modalYearOptions.find((opt) => opt.value === editForm.data.academic_year) || { value: editForm.data.academic_year, label: `ปีการศึกษา ${editForm.data.academic_year}` }}
+                                        onChange={(opt: any) => editForm.setData('academic_year', opt ? opt.value : 2569)}
+                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                    />
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={4}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold">ภาคเรียน <span className="text-danger">*</span></Form.Label>
+                                    <Select
+                                        classNamePrefix="react-select"
+                                        options={modalSemesterOptions}
+                                        value={modalSemesterOptions.find((opt) => opt.value === editForm.data.semester)}
+                                        onChange={(opt: any) => editForm.setData('semester', opt ? opt.value : 1)}
+                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                    />
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={4}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold">ประเภทกิจกรรม <span className="text-danger">*</span></Form.Label>
+                                    <Select
+                                        classNamePrefix="react-select"
+                                        options={modalTypeOptions}
+                                        value={modalTypeOptions.find((opt) => opt.value === editForm.data.activity_type)}
+                                        onChange={(opt: any) => editForm.setData('activity_type', (opt ? opt.value : 'mandatory') as any)}
+                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                    />
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={4}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold">วันที่จัดกิจกรรม <span className="text-danger">*</span></Form.Label>
+                                    <ThaiDatePicker
+                                        value={editForm.data.activity_date}
+                                        onChange={(val) => editForm.setData('activity_date', val)}
+                                        placeholder="วว/ดด/ปปปป (พ.ศ.)"
+                                    />
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={4}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold">เวลาเริ่มต้น <span className="text-danger">*</span></Form.Label>
+                                    <Form.Control
+                                        type="time"
+                                        value={editForm.data.start_time}
+                                        onChange={(e) => editForm.setData('start_time', e.target.value)}
+                                        required
+                                    />
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={4}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold">เวลาสิ้นสุด <span className="text-danger">*</span></Form.Label>
+                                    <Form.Control
+                                        type="time"
+                                        value={editForm.data.end_time}
+                                        onChange={(e) => editForm.setData('end_time', e.target.value)}
+                                        required
+                                    />
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={4}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold">จำนวนชั่วโมงกิจกรรม <span className="text-danger">*</span></Form.Label>
+                                    <InputGroup>
+                                        <Form.Control
+                                            type="number"
+                                            step="0.5"
+                                            min="0.5"
+                                            value={editForm.data.total_hours}
+                                            onChange={(e) => editForm.setData('total_hours', parseFloat(e.target.value))}
+                                            required
+                                        />
+                                        <InputGroup.Text>ชม.</InputGroup.Text>
+                                    </InputGroup>
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={8}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold">สถานที่จัดกิจกรรม</Form.Label>
+                                    <Form.Control
+                                        type="text"
+                                        placeholder="เช่น หอประชุมใหญ่ อาคารอำนวยการ วสส.สุพรรณบุรี"
+                                        value={editForm.data.location_name}
+                                        onChange={(e) => editForm.setData('location_name', e.target.value)}
+                                    />
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={12}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold d-flex align-items-center gap-1">
+                                        <IconifyIcon icon="tabler:clock-bolt" className="text-warning" /> รอบเปลี่ยน Dynamic QR Code
+                                    </Form.Label>
+                                    <Select
+                                        classNamePrefix="react-select"
+                                        options={qrIntervalOptions}
+                                        value={qrIntervalOptions.find((opt) => opt.value === editForm.data.qr_refresh_interval) || qrIntervalOptions[3]}
+                                        onChange={(opt: any) => editForm.setData('qr_refresh_interval', opt ? opt.value : 60)}
+                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                    />
+                                </Form.Group>
+                            </Col>
+
+                            {/* GPS Geofencing Setting */}
+                            <Col md={12}>
+                                <div className="p-3 bg-light rounded-3 border">
+                                    <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                                        <div className="fw-semibold text-primary d-flex align-items-center gap-1">
+                                            <IconifyIcon icon="tabler:current-location" /> การกำหนดตำแหน่งและรัศมี GPS สำหรับเช็กอิน (Geofencing)
+                                        </div>
+                                        <div className="d-flex gap-2">
+                                            <Button
+                                                variant="outline-success"
+                                                size="sm"
+                                                onClick={handleFetchCurrentDeviceLocation}
+                                                disabled={isLocatingDevice}
+                                                className="d-flex align-items-center gap-1 shadow-sm"
+                                                type="button"
+                                                title="ดึงพิกัด GPS ปัจจุบันจากอุปกรณ์มือถือหรือคอมพิวเตอร์นี้"
+                                            >
+                                                <IconifyIcon icon={isLocatingDevice ? 'tabler:loader' : 'tabler:device-mobile'} className={isLocatingDevice ? 'spin' : ''} />
+                                                {isLocatingDevice ? 'กำลังดึงพิกัด...' : 'ดึงพิกัดปัจจุบันจากอุปกรณ์'}
+                                            </Button>
+
+                                            <Button
+                                                variant="primary"
+                                                size="sm"
+                                                onClick={() => setShowMapPicker(true)}
+                                                className="d-flex align-items-center gap-1 shadow-sm"
+                                                type="button"
+                                                title="เปิดแผนที่เพื่อคลิกเลือกจุดจัดงานหรือปักหมุด"
+                                            >
+                                                <IconifyIcon icon="tabler:map" />
+                                                เปิดแผนที่เลือกพิกัด / ปักหมุด
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    <Row className="g-2">
+                                        <Col md={4}>
+                                            <Form.Label className="fs-12 text-muted">ละติจูด (Latitude)</Form.Label>
+                                            <Form.Control
+                                                type="number"
+                                                step="0.000001"
+                                                value={editForm.data.latitude}
+                                                onChange={(e) => editForm.setData('latitude', parseFloat(e.target.value) || 0)}
+                                            />
+                                        </Col>
+                                        <Col md={4}>
+                                            <Form.Label className="fs-12 text-muted">ลองจิจูด (Longitude)</Form.Label>
+                                            <Form.Control
+                                                type="number"
+                                                step="0.000001"
+                                                value={editForm.data.longitude}
+                                                onChange={(e) => editForm.setData('longitude', parseFloat(e.target.value) || 0)}
+                                            />
+                                        </Col>
+                                        <Col md={4}>
+                                            <Form.Label className="fs-12 text-muted">รัศมีที่อนุญาต (เมตร)</Form.Label>
+                                            <InputGroup>
+                                                <Form.Control
+                                                    type="number"
+                                                    value={editForm.data.radius_limit}
+                                                    onChange={(e) => editForm.setData('radius_limit', parseInt(e.target.value) || 50)}
+                                                />
+                                                <InputGroup.Text>ม.</InputGroup.Text>
+                                            </InputGroup>
+                                        </Col>
+                                    </Row>
+
+                                    <div className="d-flex justify-content-between align-items-center mt-2 flex-wrap gap-1">
+                                        <small className="text-muted">
+                                            * พิกัดปัจจุบันสำหรับตรวจสอบการเช็กอินของนักศึกษา
+                                        </small>
+                                        <a
+                                            href={`https://www.google.com/maps/search/?api=1&query=${editForm.data.latitude},${editForm.data.longitude}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="fs-12 text-decoration-none d-flex align-items-center gap-1 text-danger"
+                                        >
+                                            <IconifyIcon icon="tabler:brand-google-maps" /> ดูตำแหน่งนี้บน Google Maps &gt;
+                                        </a>
+                                    </div>
+                                </div>
+                            </Col>
+
+                            <Col md={12}>
+                                <Form.Group>
+                                    <Form.Label className="fw-semibold">รายละเอียดกิจกรรมเพิ่มเติม</Form.Label>
+                                    <Form.Control
+                                        as="textarea"
+                                        rows={3}
+                                        placeholder="ระบุวัตถุประสงค์ คำชี้แจงการแต่งกาย และรายละเอียดข้อกำหนด..."
+                                        value={editForm.data.description}
+                                        onChange={(e) => editForm.setData('description', e.target.value)}
+                                    />
+                                </Form.Group>
+                            </Col>
+                        </Row>
+                    </Modal.Body>
+                    <Modal.Footer className="bg-light">
+                        <Button variant="secondary" onClick={() => setShowEditModal(false)}>
+                            ยกเลิก
+                        </Button>
+                        <Button variant="warning" type="submit" disabled={editForm.processing} className="d-flex align-items-center gap-1 text-dark fw-semibold">
+                            <IconifyIcon icon="tabler:check" />
+                            {editForm.processing ? 'กำลังบันทึก...' : 'บันทึกการแก้ไขกิจกรรม'}
+                        </Button>
+                    </Modal.Footer>
+                </Form>
+            </Modal>
+
+            {/* Modal: Interactive Map Picker */}
+            <LocationMapPickerModal
+                show={showMapPicker}
+                onHide={() => setShowMapPicker(false)}
+                latitude={editForm.data.latitude}
+                longitude={editForm.data.longitude}
+                radius={editForm.data.radius_limit}
+                locationName={editForm.data.location_name}
+                onConfirm={(lat, lng, radius) => {
+                    editForm.setData((prev) => ({
+                        ...prev,
+                        latitude: lat,
+                        longitude: lng,
+                        radius_limit: radius || prev.radius_limit,
+                    }));
+                }}
+            />
         </MainLayout>
     );
 }
+

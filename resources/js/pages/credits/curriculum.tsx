@@ -15,6 +15,7 @@ import {
     Modal,
     Form,
 } from 'react-bootstrap';
+import Select from 'react-select';
 
 interface CourseItem {
     id: number;
@@ -76,6 +77,30 @@ const CurriculumManagementPage: React.FC<Props> = ({ curriculums, is_admin }) =>
         description: '',
         is_active: true,
     });
+
+    const categoryOptions = [
+        { value: 'core', label: 'หมวดวิชาบังคับ' },
+        { value: 'elective', label: 'หมวดวิชาเลือก' },
+        { value: 'thesis', label: 'หมวดวิทยานิพนธ์ / IS' },
+        { value: 'remedial', label: 'หมวดวิชาปรับพื้นฐาน' },
+    ];
+
+    const yearSuggestedOptions = [
+        { value: 1, label: 'ชั้นปีที่ 1' },
+        { value: 2, label: 'ชั้นปีที่ 2' },
+    ];
+
+    const termSuggestedOptions = [
+        { value: 1, label: 'ภาคเรียนที่ 1' },
+        { value: 2, label: 'ภาคเรียนที่ 2' },
+        { value: 3, label: 'ภาคฤดูร้อน' },
+    ];
+
+    const degreeLevelOptions = [
+        { value: 'ปริญญาโท', label: 'ปริญญาโท' },
+        { value: 'ปริญญาตรี', label: 'ปริญญาตรี' },
+        { value: 'ปริญญาเอก', label: 'ปริญญาเอก' },
+    ];
 
     const handleOpenAddCurriculumModal = () => {
         setEditingCurriculum(null);
@@ -300,8 +325,8 @@ const CurriculumManagementPage: React.FC<Props> = ({ curriculums, is_admin }) =>
 
     return (
         <MainLayout>
-            <Head title="โครงสร้างหลักสูตรและรายวิชา - ปริญญาโท วสส.สุพรรณบุรี" />
-            <PageTitle title="โครงสร้างหลักสูตรและรายวิชา" subTitle="จัดการหลักสูตรและแผนการเรียน ปริญญาโท วสส.สุพรรณบุรี" />
+            <Head title="โครงสร้างหลักสูตรและรายวิชา - ปริญญาโท" />
+            <PageTitle title="โครงสร้างหลักสูตรและรายวิชา" subTitle="จัดการหลักสูตรและแผนการเรียน ปริญญาโท" />
 
             {/* Top Bar Actions */}
             <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
@@ -380,7 +405,7 @@ const CurriculumManagementPage: React.FC<Props> = ({ curriculums, is_admin }) =>
                                     </Badge>
                                 </div>
                                 <p className="text-muted fs-13 mb-2">
-                                    {activeCurriculum.description || 'หลักสูตรระดับปริญญาโท วสส.สุพรรณบุรี แผน ก แบบ ก 2'}
+                                    {activeCurriculum.description || 'หลักสูตรระดับปริญญาโท แผน ก แบบ ก 2'}
                                 </p>
                                 <div className="d-flex align-items-center gap-3 text-muted fs-12 flex-wrap">
                                     <span>ปีการศึกษาเริ่มต้น: <strong>{activeCurriculum.academic_year_start || '2566'}</strong></span>
@@ -609,15 +634,14 @@ const CurriculumManagementPage: React.FC<Props> = ({ curriculums, is_admin }) =>
                             <Col md={4}>
                                 <Form.Group>
                                     <Form.Label className="fw-semibold fs-13">หมวดวิชา <span className="text-danger">*</span></Form.Label>
-                                    <Form.Select
-                                        value={formData.category}
-                                        onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
-                                    >
-                                        <option value="core">หมวดวิชาบังคับ</option>
-                                        <option value="elective">หมวดวิชาเลือก</option>
-                                        <option value="thesis">หมวดวิทยานิพนธ์ / IS</option>
-                                        <option value="remedial">หมวดวิชาปรับพื้นฐาน</option>
-                                    </Form.Select>
+                                    <Select
+                                        classNamePrefix="react-select"
+                                        options={categoryOptions}
+                                        value={categoryOptions.find((opt) => opt.value === formData.category) || categoryOptions[0]}
+                                        onChange={(opt: any) => setFormData({ ...formData, category: opt ? opt.value : 'core' })}
+                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                    />
                                 </Form.Group>
                             </Col>
 
@@ -649,27 +673,28 @@ const CurriculumManagementPage: React.FC<Props> = ({ curriculums, is_admin }) =>
                             <Col md={6}>
                                 <Form.Group>
                                     <Form.Label className="fw-semibold fs-13">ชั้นปีที่แนะนำให้เรียน</Form.Label>
-                                    <Form.Select
-                                        value={formData.year_suggested}
-                                        onChange={(e) => setFormData({ ...formData, year_suggested: Number(e.target.value) })}
-                                    >
-                                        <option value="1">ชั้นปีที่ 1</option>
-                                        <option value="2">ชั้นปีที่ 2</option>
-                                    </Form.Select>
+                                    <Select
+                                        classNamePrefix="react-select"
+                                        options={yearSuggestedOptions}
+                                        value={yearSuggestedOptions.find((opt) => opt.value === Number(formData.year_suggested)) || yearSuggestedOptions[0]}
+                                        onChange={(opt: any) => setFormData({ ...formData, year_suggested: opt ? opt.value : 1 })}
+                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                    />
                                 </Form.Group>
                             </Col>
 
                             <Col md={6}>
                                 <Form.Group>
                                     <Form.Label className="fw-semibold fs-13">ภาคเรียนที่แนะนำให้เรียน</Form.Label>
-                                    <Form.Select
-                                        value={formData.term_suggested}
-                                        onChange={(e) => setFormData({ ...formData, term_suggested: Number(e.target.value) })}
-                                    >
-                                        <option value="1">ภาคเรียนที่ 1</option>
-                                        <option value="2">ภาคเรียนที่ 2</option>
-                                        <option value="3">ภาคฤดูร้อน</option>
-                                    </Form.Select>
+                                    <Select
+                                        classNamePrefix="react-select"
+                                        options={termSuggestedOptions}
+                                        value={termSuggestedOptions.find((opt) => opt.value === Number(formData.term_suggested)) || termSuggestedOptions[0]}
+                                        onChange={(opt: any) => setFormData({ ...formData, term_suggested: opt ? opt.value : 1 })}
+                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                    />
                                 </Form.Group>
                             </Col>
                         </Row>
@@ -724,14 +749,14 @@ const CurriculumManagementPage: React.FC<Props> = ({ curriculums, is_admin }) =>
                             <Col md={3}>
                                 <Form.Group>
                                     <Form.Label className="fw-semibold fs-13">ระดับการศึกษา <span className="text-danger">*</span></Form.Label>
-                                    <Form.Select
-                                        value={curriculumFormData.degree_level}
-                                        onChange={(e) => setCurriculumFormData({ ...curriculumFormData, degree_level: e.target.value })}
-                                    >
-                                        <option value="ปริญญาโท">ปริญญาโท</option>
-                                        <option value="ปริญญาตรี">ปริญญาตรี</option>
-                                        <option value="ปริญญาเอก">ปริญญาเอก</option>
-                                    </Form.Select>
+                                    <Select
+                                        classNamePrefix="react-select"
+                                        options={degreeLevelOptions}
+                                        value={degreeLevelOptions.find((opt) => opt.value === curriculumFormData.degree_level) || degreeLevelOptions[0]}
+                                        onChange={(opt: any) => setCurriculumFormData({ ...curriculumFormData, degree_level: opt ? opt.value : 'ปริญญาโท' })}
+                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                    />
                                 </Form.Group>
                             </Col>
 

@@ -15,6 +15,7 @@ import {
     Form,
     InputGroup,
 } from 'react-bootstrap';
+import Select from 'react-select';
 
 interface StudentProfileItem {
     id: number;
@@ -65,9 +66,54 @@ interface CurriculumItem {
     elective_credits_required: number;
     thesis_credits_required: number;
     min_gpa_graduate: number;
+    courses_count?: number;
+}
+
+interface StudentProfileItem {
+    id: number;
+    student_code: string | null;
+    first_name_th: string | null;
+    last_name_th: string | null;
+    full_name_th: string;
+    major: string | null;
+    academic_year: string | null;
+    class_year: string | null;
+    advisor_name: string | null;
+    gpa: number | string | null;
+    curriculum_id?: number | null;
+    curriculum?: CurriculumItem | null;
+}
+
+interface CreditSummary {
+    total_required: number;
+    total_earned: number;
+    progress_percent: number;
+    core_required: number;
+    core_earned: number;
+    core_percent: number;
+    elective_required: number;
+    elective_earned: number;
+    elective_percent: number;
+    thesis_required: number;
+    thesis_earned: number;
+    thesis_percent: number;
+    gpa: number;
+    has_risk: boolean;
+    is_completed: boolean;
+    grades_count: number;
+}
+
+interface StudentItem {
+    id: number;
+    name: string;
+    email: string;
+    student_profile: StudentProfileItem | null;
+    credit_summary: CreditSummary;
 }
 
 interface Props {
+    curriculums?: CurriculumItem[];
+    selected_curriculum_id?: string;
     curriculum: CurriculumItem | null;
     academic_years: string[];
     selected_year: string;
@@ -85,6 +131,8 @@ interface Props {
 }
 
 const CreditOverviewPage: React.FC<Props> = ({
+    curriculums = [],
+    selected_curriculum_id = 'all',
     curriculum,
     academic_years,
     selected_year,
@@ -94,15 +142,37 @@ const CreditOverviewPage: React.FC<Props> = ({
     stats,
     is_admin,
 }) => {
+    const [selectedCurriculumId, setSelectedCurriculumId] = useState(selected_curriculum_id || 'all');
     const [searchTerm, setSearchTerm] = useState(initialSearch);
     const [currentYear, setCurrentYear] = useState(selected_year);
     const [currentStatus, setCurrentStatus] = useState(initialStatus);
 
+    const curriculumOptions = [
+        { value: 'all', label: 'ทุกหลักสูตร / สาขาวิชา' },
+        ...(curriculums || []).map((c) => ({
+            value: String(c.id),
+            label: `${c.code}: ${c.name}`,
+        })),
+    ];
+
+    const yearOptions = [
+        { value: 'all', label: 'ทุกปีการศึกษา' },
+        ...academic_years.map((yr) => ({ value: String(yr), label: `ปีการศึกษา ${yr}` })),
+    ];
+
+    const statusOptions = [
+        { value: 'all', label: 'สถานะทั้งหมด' },
+        { value: 'completed', label: 'ครบเกณฑ์ 100% (พร้อมจบ)' },
+        { value: 'in_progress', label: 'อยู่ระหว่างเก็บหน่วยกิต' },
+        { value: 'at_risk', label: 'ต้องติดตามพิเศษ (ติด U/I/F)' },
+    ];
+
     // Filter submit
-    const handleFilterChange = (year: string, status: string, q: string) => {
+    const handleFilterChange = (curriculumId: string, year: string, status: string, q: string) => {
         router.get(
             '/credits',
             {
+                curriculum_id: curriculumId,
                 academic_year: year,
                 credit_status: status,
                 search: q,
@@ -116,34 +186,45 @@ const CreditOverviewPage: React.FC<Props> = ({
 
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        handleFilterChange(currentYear, currentStatus, searchTerm);
+        handleFilterChange(selectedCurriculumId, currentYear, currentStatus, searchTerm);
     };
 
     const handleResetFilters = () => {
         setSearchTerm('');
         setCurrentYear('all');
         setCurrentStatus('all');
+        setSelectedCurriculumId('all');
         router.get('/credits');
     };
 
     return (
         <MainLayout>
-            <Head title="ภาพรวมหน่วยกิต ปริญญาโท วสส.สุพรรณบุรี" />
-            <PageTitle title="ภาพรวมหน่วยกิต ปริญญาโท" subTitle="ระบบติดตามหน่วยกิตและผลการเรียน วสส.สุพรรณบุรี" />
+            <Head title="ภาพรวมหน่วยกิต" />
+            <PageTitle title="ภาพรวมหน่วยกิต" subTitle="ระบบติดตามหน่วยกิตและผลการเรียน" />
 
             {/* Top Info Banner & Actions */}
             <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
                 <div>
                     <div className="d-flex align-items-center gap-2 flex-wrap">
                         <h4 className="mb-0 fw-bold text-dark fs-18">
-                            {curriculum ? curriculum.name : 'หลักสูตรสาธารณสุขศาสตรมหาบัณฑิต (ส.ม.)'}
+                            {selectedCurriculumId !== 'all' && curriculum
+                                ? `${curriculum.name} (${curriculum.code})`
+                                : 'ภาพรวมหน่วยกิตนักศึกษา ทุกหลักสูตร'}
                         </h4>
-                        <Badge bg="primary-subtle" className="text-primary border border-primary-subtle fs-12 px-2 py-1">
-                            เกณฑ์จบ {curriculum?.total_credits || 36} หน่วยกิต (GPA ≥ {curriculum?.min_gpa_graduate || 3.00})
-                        </Badge>
+                        {selectedCurriculumId !== 'all' && curriculum ? (
+                            <Badge bg="primary-subtle" className="text-primary border border-primary-subtle fs-12 px-2 py-1">
+                                เกณฑ์จบ {curriculum.total_credits || 36} หน่วยกิต (GPA ≥ {curriculum.min_gpa_graduate || 3.00})
+                            </Badge>
+                        ) : (
+                            <Badge bg="info-subtle" className="text-info border border-info-subtle fs-12 px-2 py-1">
+                                ทั้งหมด {curriculums?.length || 0} หลักสูตร
+                            </Badge>
+                        )}
                     </div>
                     <small className="text-muted d-block mt-1">
-                        ติดตามความก้าวหน้าการเรียน การสะสมหน่วยกิต และเกรดเฉลี่ยของนักศึกษาทุกรุ่น
+                        {selectedCurriculumId !== 'all' && curriculum
+                            ? `แสดงรายชื่อและติดตามความก้าวหน้านักศึกษาในหลักสูตร ${curriculum.name}`
+                            : 'ติดตามความก้าวหน้าการเรียน การสะสมหน่วยกิต และเกรดเฉลี่ยของนักศึกษาทุกหลักสูตรในระบบ'}
                     </small>
                 </div>
 
@@ -239,51 +320,77 @@ const CreditOverviewPage: React.FC<Props> = ({
             {/* Filter Card */}
             <Card className="shadow-sm border-0 mb-4">
                 <CardBody className="p-3">
-                    <Row className="g-2 align-items-center">
-                        {/* ปีการศึกษา Dropdown */}
-                        <Col lg={3} md={4} sm={6}>
+                    <Row className="g-3 align-items-end">
+                        {/* เลือกหลักสูตร / สาขาวิชา Dropdown */}
+                        <Col xl={4} lg={6} md={12}>
                             <Form.Group>
-                                <Form.Label className="fs-12 text-muted mb-1 fw-semibold">ปีการศึกษาที่เข้าศึกษา</Form.Label>
-                                <Form.Select
-                                    size="sm"
-                                    value={currentYear}
-                                    onChange={(e) => {
-                                        setCurrentYear(e.target.value);
-                                        handleFilterChange(e.target.value, currentStatus, searchTerm);
+                                <Form.Label className="fs-12 text-muted mb-1 fw-semibold d-flex align-items-center gap-1">
+                                    <IconifyIcon icon="tabler:school" className="text-primary fs-14" />
+                                    <span>เลือกหลักสูตร / สาขาวิชา</span>
+                                </Form.Label>
+                                <Select
+                                    classNamePrefix="react-select"
+                                    options={curriculumOptions}
+                                    value={curriculumOptions.find((opt) => opt.value === selectedCurriculumId) || curriculumOptions[0]}
+                                    onChange={(opt: any) => {
+                                        const val = opt ? opt.value : 'all';
+                                        setSelectedCurriculumId(val);
+                                        handleFilterChange(val, currentYear, currentStatus, searchTerm);
                                     }}
-                                >
-                                    <option value="all">ทุกปีการศึกษา</option>
-                                    {academic_years.map((yr) => (
-                                        <option key={yr} value={yr}>ปีการศึกษา {yr}</option>
-                                    ))}
-                                </Form.Select>
+                                    isClearable={false}
+                                />
+                            </Form.Group>
+                        </Col>
+
+                        {/* ปีการศึกษา Dropdown */}
+                        <Col xl={2} lg={3} md={6}>
+                            <Form.Group>
+                                <Form.Label className="fs-12 text-muted mb-1 fw-semibold d-flex align-items-center gap-1">
+                                    <IconifyIcon icon="tabler:calendar" className="text-muted fs-14" />
+                                    <span>ปีการศึกษา</span>
+                                </Form.Label>
+                                <Select
+                                    classNamePrefix="react-select"
+                                    options={yearOptions}
+                                    value={yearOptions.find((opt) => opt.value === currentYear) || yearOptions[0]}
+                                    onChange={(opt: any) => {
+                                        const val = opt ? opt.value : 'all';
+                                        setCurrentYear(val);
+                                        handleFilterChange(selectedCurriculumId, val, currentStatus, searchTerm);
+                                    }}
+                                    isClearable={false}
+                                />
                             </Form.Group>
                         </Col>
 
                         {/* สถานะหน่วยกิต */}
-                        <Col lg={3} md={4} sm={6}>
+                        <Col xl={2} lg={3} md={6}>
                             <Form.Group>
-                                <Form.Label className="fs-12 text-muted mb-1 fw-semibold">สถานะหน่วยกิต</Form.Label>
-                                <Form.Select
-                                    size="sm"
-                                    value={currentStatus}
-                                    onChange={(e) => {
-                                        setCurrentStatus(e.target.value);
-                                        handleFilterChange(currentYear, e.target.value, searchTerm);
+                                <Form.Label className="fs-12 text-muted mb-1 fw-semibold d-flex align-items-center gap-1">
+                                    <IconifyIcon icon="tabler:chart-donut" className="text-muted fs-14" />
+                                    <span>สถานะหน่วยกิต</span>
+                                </Form.Label>
+                                <Select
+                                    classNamePrefix="react-select"
+                                    options={statusOptions}
+                                    value={statusOptions.find((opt) => opt.value === currentStatus) || statusOptions[0]}
+                                    onChange={(opt: any) => {
+                                        const val = opt ? opt.value : 'all';
+                                        setCurrentStatus(val);
+                                        handleFilterChange(selectedCurriculumId, currentYear, val, searchTerm);
                                     }}
-                                >
-                                    <option value="all">สถานะทั้งหมด</option>
-                                    <option value="completed">ครบเกณฑ์ 100% (พร้อมจบ)</option>
-                                    <option value="in_progress">อยู่ระหว่างเก็บหน่วยกิต</option>
-                                    <option value="at_risk">ต้องติดตามพิเศษ (ติด U/I/F)</option>
-                                </Form.Select>
+                                    isClearable={false}
+                                />
                             </Form.Group>
                         </Col>
 
                         {/* Search Box */}
-                        <Col lg={4} md={4} sm={12}>
+                        <Col xl={3} lg={8} md={8}>
                             <Form.Group>
-                                <Form.Label className="fs-12 text-muted mb-1 fw-semibold">ค้นหานักศึกษา</Form.Label>
+                                <Form.Label className="fs-12 text-muted mb-1 fw-semibold d-flex align-items-center gap-1">
+                                    <IconifyIcon icon="tabler:search" className="text-muted fs-14" />
+                                    <span>ค้นหานักศึกษา</span>
+                                </Form.Label>
                                 <form onSubmit={handleSearchSubmit}>
                                     <InputGroup size="sm">
                                         <InputGroup.Text className="bg-light border-end-0">
@@ -291,7 +398,7 @@ const CreditOverviewPage: React.FC<Props> = ({
                                         </InputGroup.Text>
                                         <Form.Control
                                             type="text"
-                                            placeholder="ค้นหาชื่อ, รหัสนักศึกษา, สาขา..."
+                                            placeholder="ชื่อ, รหัสนักศึกษา, สาขา..."
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
                                             className="border-start-0"
@@ -303,10 +410,16 @@ const CreditOverviewPage: React.FC<Props> = ({
                         </Col>
 
                         {/* Reset Button */}
-                        <Col lg={2} md={12} className="text-lg-end mt-lg-4">
-                            <Button variant="outline-secondary" size="sm" onClick={handleResetFilters} className="w-100">
-                                <IconifyIcon icon="tabler:refresh" className="me-1" />
-                                ล้างตัวกรอง
+                        <Col xl={1} lg={4} md={4} className="text-end">
+                            <Button
+                                variant="outline-secondary"
+                                size="sm"
+                                onClick={handleResetFilters}
+                                className="w-100 py-1 d-inline-flex align-items-center justify-content-center gap-1 shadow-sm"
+                                title="ล้างตัวกรองทั้งหมด"
+                            >
+                                <IconifyIcon icon="tabler:refresh" />
+                                <span>รีเซ็ต</span>
                             </Button>
                         </Col>
                     </Row>
@@ -325,7 +438,9 @@ const CreditOverviewPage: React.FC<Props> = ({
                                 รายชื่อนักศึกษาและความก้าวหน้าหน่วยกิต ({students.length} คน)
                             </h5>
                             <small className="text-muted">
-                                แสดงสัดส่วนหน่วยกิตที่ผ่านตามแผนการศึกษาและเกรดเฉลี่ยสะสม
+                                {selectedCurriculumId !== 'all' && curriculum
+                                    ? `หลักสูตร: ${curriculum.name} (${curriculum.code})`
+                                    : 'แสดงรายชื่อนักศึกษาจากทุกหลักสูตรในระบบ'}
                             </small>
                         </div>
                     </div>
@@ -337,7 +452,7 @@ const CreditOverviewPage: React.FC<Props> = ({
                             <thead className="bg-light-subtle text-muted text-uppercase fs-12">
                                 <tr>
                                     <th style={{ width: 60 }} className="text-center">#</th>
-                                    <th style={{ minWidth: 220 }}>ข้อมูลนักศึกษา</th>
+                                    <th style={{ minWidth: 240 }}>ข้อมูลนักศึกษา</th>
                                     <th style={{ width: 140 }}>ปี / ชั้นปี</th>
                                     <th style={{ minWidth: 220 }}>ความคืบหน้าหน่วยกิตรวม</th>
                                     <th style={{ minWidth: 200 }}>หมวดวิชา (บังคับ / เลือก / วิทยานิพนธ์)</th>
@@ -383,7 +498,7 @@ const CreditOverviewPage: React.FC<Props> = ({
                                                             >
                                                                 {fullName}
                                                             </Link>
-                                                            <div className="d-flex align-items-center gap-1 text-muted fs-12 mt-1">
+                                                            <div className="d-flex align-items-center gap-1 text-muted fs-12 mt-1 flex-wrap">
                                                                 {studentCode ? (
                                                                     <Badge bg="light" className="text-primary border border-primary-subtle py-0 px-1">
                                                                         รหัส: {studentCode}
@@ -391,11 +506,15 @@ const CreditOverviewPage: React.FC<Props> = ({
                                                                 ) : (
                                                                     <span className="text-muted">{student.email}</span>
                                                                 )}
-                                                                {profile?.major && (
-                                                                    <span className="text-truncate" style={{ maxWidth: 140 }}>
-                                                                        • {profile.major}
-                                                                    </span>
-                                                                )}
+                                                                {profile?.curriculum ? (
+                                                                    <Badge bg="info-subtle" className="text-info border border-info-subtle py-0 px-1" title={profile.curriculum.name}>
+                                                                        {profile.curriculum.code}
+                                                                    </Badge>
+                                                                ) : profile?.major ? (
+                                                                    <Badge bg="secondary-subtle" className="text-secondary border border-secondary-subtle py-0 px-1 text-truncate" style={{ maxWidth: 160 }}>
+                                                                        {profile.major}
+                                                                    </Badge>
+                                                                ) : null}
                                                             </div>
                                                         </div>
                                                     </div>

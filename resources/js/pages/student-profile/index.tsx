@@ -15,10 +15,12 @@ import {
     Tab,
     InputGroup
 } from 'react-bootstrap';
+import Select from 'react-select';
 import MainLayout from '@/layouts/MainLayout';
 import PageTitle from '@/components/PageTitle';
 import IconifyIcon from '@/components/wrappers/IconifyIcon';
 import Swal from 'sweetalert2';
+import ThaiDatePicker from '@/components/ThaiDatePicker';
 
 export interface StudentProfileData {
     id: number;
@@ -171,6 +173,45 @@ const StudentProfilePage = ({
         emergency_phone: student_profile?.emergency_phone || '',
         health_conditions: student_profile?.health_conditions || '',
     });
+
+    const prefixOptions = [
+        { value: 'นาย', label: 'นาย' },
+        { value: 'นางสาว', label: 'นางสาว' },
+        { value: 'นาง', label: 'นาง' },
+    ];
+
+    const genderOptions = [
+        { value: 'ชาย', label: 'ชาย' },
+        { value: 'หญิง', label: 'หญิง' },
+        { value: 'อื่นๆ', label: 'อื่นๆ' },
+    ];
+
+    const bloodGroupOptions = [
+        { value: 'A', label: 'A' },
+        { value: 'B', label: 'B' },
+        { value: 'AB', label: 'AB' },
+        { value: 'O', label: 'O' },
+    ];
+
+    const majorOptions = (curriculums && curriculums.length > 0)
+        ? curriculums.map((c) => ({
+              value: c.name,
+              label: c.code ? `[${c.code}] ${c.name}` : c.name,
+          }))
+        : [
+              { value: 'หลักสูตรสาธารณสุขศาสตรมหาบัณฑิต (ส.ม.)', label: 'หลักสูตรสาธารณสุขศาสตรมหาบัณฑิต (ส.ม.)' },
+              { value: 'สาธารณสุขศาสตรบัณฑิต (สาธารณสุขชุมชน)', label: 'สาธารณสุขศาสตรบัณฑิต (สาธารณสุขชุมชน)' },
+              { value: 'สาธารณสุขศาสตรบัณฑิต (ทันตสาธารณสุข)', label: 'สาธารณสุขศาสตรบัณฑิต (ทันตสาธารณสุข)' },
+              { value: 'การแพทย์แผนไทยบัณฑิต', label: 'การแพทย์แผนไทยบัณฑิต' },
+          ];
+
+    const classYearOptions = [
+        { value: 'ชั้นปีที่ 1', label: 'ชั้นปีที่ 1' },
+        { value: 'ชั้นปีที่ 2', label: 'ชั้นปีที่ 2' },
+        { value: 'ชั้นปีที่ 3', label: 'ชั้นปีที่ 3' },
+        { value: 'ชั้นปีที่ 4', label: 'ชั้นปีที่ 4' },
+        { value: 'สำเร็จการศึกษา', label: 'สำเร็จการศึกษา' },
+    ];
 
     const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -1022,14 +1063,14 @@ const StudentProfilePage = ({
                             <Col md={2}>
                                 <Form.Group controlId="modalPrefix">
                                     <Form.Label className="fw-semibold text-dark fs-13">คำนำหน้าชื่อ</Form.Label>
-                                    <Form.Select
-                                        value={formData.title_prefix}
-                                        onChange={(e) => setFormData({ ...formData, title_prefix: e.target.value })}
-                                    >
-                                        <option value="นาย">นาย</option>
-                                        <option value="นางสาว">นางสาว</option>
-                                        <option value="นาง">นาง</option>
-                                    </Form.Select>
+                                    <Select
+                                        classNamePrefix="react-select"
+                                        options={prefixOptions}
+                                        value={prefixOptions.find((opt) => opt.value === formData.title_prefix) || prefixOptions[0]}
+                                        onChange={(opt: any) => setFormData({ ...formData, title_prefix: opt ? opt.value : 'นาย' })}
+                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                    />
                                 </Form.Group>
                             </Col>
 
@@ -1101,10 +1142,10 @@ const StudentProfilePage = ({
                             <Col md={4}>
                                 <Form.Group controlId="modalBirthDate">
                                     <Form.Label className="fw-semibold text-dark fs-13">วัน/เดือน/ปี เกิด</Form.Label>
-                                    <Form.Control
-                                        type="date"
+                                    <ThaiDatePicker
                                         value={formData.birth_date}
-                                        onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
+                                        onChange={(val) => setFormData({ ...formData, birth_date: val })}
+                                        placeholder="วว/ดด/ปปปป (พ.ศ.)"
                                     />
                                 </Form.Group>
                             </Col>
@@ -1112,29 +1153,28 @@ const StudentProfilePage = ({
                             <Col md={2}>
                                 <Form.Group controlId="modalGender">
                                     <Form.Label className="fw-semibold text-dark fs-13">เพศ</Form.Label>
-                                    <Form.Select
-                                        value={formData.gender}
-                                        onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                                    >
-                                        <option value="ชาย">ชาย</option>
-                                        <option value="หญิง">หญิง</option>
-                                        <option value="อื่นๆ">อื่นๆ</option>
-                                    </Form.Select>
+                                    <Select
+                                        classNamePrefix="react-select"
+                                        options={genderOptions}
+                                        value={genderOptions.find((opt) => opt.value === formData.gender) || genderOptions[0]}
+                                        onChange={(opt: any) => setFormData({ ...formData, gender: opt ? opt.value : 'ชาย' })}
+                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                    />
                                 </Form.Group>
                             </Col>
 
                             <Col md={2}>
                                 <Form.Group controlId="modalBlood">
                                     <Form.Label className="fw-semibold text-dark fs-13">หมู่เลือด</Form.Label>
-                                    <Form.Select
-                                        value={formData.blood_group}
-                                        onChange={(e) => setFormData({ ...formData, blood_group: e.target.value })}
-                                    >
-                                        <option value="A">A</option>
-                                        <option value="B">B</option>
-                                        <option value="AB">AB</option>
-                                        <option value="O">O</option>
-                                    </Form.Select>
+                                    <Select
+                                        classNamePrefix="react-select"
+                                        options={bloodGroupOptions}
+                                        value={bloodGroupOptions.find((opt) => opt.value === formData.blood_group) || bloodGroupOptions[1]}
+                                        onChange={(opt: any) => setFormData({ ...formData, blood_group: opt ? opt.value : 'B' })}
+                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                    />
                                 </Form.Group>
                             </Col>
 
@@ -1196,47 +1236,30 @@ const StudentProfilePage = ({
                             <Col md={8}>
                                 <Form.Group controlId="modalMajor">
                                     <Form.Label className="fw-semibold text-dark fs-13">สาขาวิชา / หลักสูตร <span className="text-danger">*</span></Form.Label>
-                                    <Form.Select
-                                        value={formData.major}
-                                        onChange={(e) => setFormData({ ...formData, major: e.target.value })}
-                                    >
-                                        <option value="">-- เลือกสาขาวิชา / หลักสูตร --</option>
-                                        {curriculums && curriculums.length > 0 ? (
-                                            curriculums.map((c) => (
-                                                <option key={c.id} value={c.name}>
-                                                    {c.code ? `[${c.code}] ` : ''}{c.name}
-                                                </option>
-                                            ))
-                                        ) : (
-                                            <>
-                                                <option value="หลักสูตรสาธารณสุขศาสตรมหาบัณฑิต (ส.ม.)">หลักสูตรสาธารณสุขศาสตรมหาบัณฑิต (ส.ม.)</option>
-                                                <option value="สาธารณสุขศาสตรบัณฑิต (สาธารณสุขชุมชน)">สาธารณสุขศาสตรบัณฑิต (สาธารณสุขชุมชน)</option>
-                                                <option value="สาธารณสุขศาสตรบัณฑิต (ทันตสาธารณสุข)">สาธารณสุขศาสตรบัณฑิต (ทันตสาธารณสุข)</option>
-                                                <option value="การแพทย์แผนไทยบัณฑิต">การแพทย์แผนไทยบัณฑิต</option>
-                                            </>
-                                        )}
-                                        {formData.major &&
-                                            (!curriculums || !curriculums.some(c => c.name === formData.major)) &&
-                                            !["หลักสูตรสาธารณสุขศาสตรมหาบัณฑิต (ส.ม.)", "สาธารณสุขศาสตรบัณฑิต (สาธารณสุขชุมชน)", "สาธารณสุขศาสตรบัณฑิต (ทันตสาธารณสุข)", "การแพทย์แผนไทยบัณฑิต"].includes(formData.major) && (
-                                                <option value={formData.major}>{formData.major}</option>
-                                        )}
-                                    </Form.Select>
+                                    <Select
+                                        classNamePrefix="react-select"
+                                        options={majorOptions}
+                                        value={majorOptions.find((opt) => opt.value === formData.major) || (formData.major ? { value: formData.major, label: formData.major } : null)}
+                                        onChange={(opt: any) => setFormData({ ...formData, major: opt ? opt.value : '' })}
+                                        placeholder="-- เลือกสาขาวิชา / หลักสูตร --"
+                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                        isClearable
+                                    />
                                 </Form.Group>
                             </Col>
 
                             <Col md={4}>
                                 <Form.Group controlId="modalClassYear">
                                     <Form.Label className="fw-semibold text-dark fs-13">ชั้นปี</Form.Label>
-                                    <Form.Select
-                                        value={formData.class_year}
-                                        onChange={(e) => setFormData({ ...formData, class_year: e.target.value })}
-                                    >
-                                        <option value="ชั้นปีที่ 1">ชั้นปีที่ 1</option>
-                                        <option value="ชั้นปีที่ 2">ชั้นปีที่ 2</option>
-                                        <option value="ชั้นปีที่ 3">ชั้นปีที่ 3</option>
-                                        <option value="ชั้นปีที่ 4">ชั้นปีที่ 4</option>
-                                        <option value="สำเร็จการศึกษา">สำเร็จการศึกษา</option>
-                                    </Form.Select>
+                                    <Select
+                                        classNamePrefix="react-select"
+                                        options={classYearOptions}
+                                        value={classYearOptions.find((opt) => opt.value === formData.class_year) || classYearOptions[0]}
+                                        onChange={(opt: any) => setFormData({ ...formData, class_year: opt ? opt.value : 'ชั้นปีที่ 1' })}
+                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                    />
                                 </Form.Group>
                             </Col>
 

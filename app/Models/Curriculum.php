@@ -38,4 +38,9 @@ class Curriculum extends Model
     {
         return $this->hasMany(Course::class, 'curriculum_id')->orderBy('order_no', 'asc');
     }
+
+    public function studentProfiles()
+    {
+        return $this->hasMany(StudentProfile::class, 'curriculum_id');
+    }
 }

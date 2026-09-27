@@ -9,6 +9,7 @@ import { html } from 'gridjs';
 import * as XLSX from 'xlsx';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import ThaiDatePicker from '@/components/ThaiDatePicker';
 
 interface Department {
     id: number;
@@ -240,29 +241,30 @@ const ViewReportPage = ({ report }: ViewReportProps) => {
                             {hasDateRange && (
                                 <>
                                     <Col xs={12} sm={6} md={3}>
-                                        <div className="input-group input-group-sm shadow-sm">
-                                            <span className="input-group-text bg-light fw-medium">ตั้งแต่วันที่</span>
-                                            <input
-                                                type="date"
-                                                className="form-control font-monospace"
+                                        <div className="d-flex flex-column">
+                                            <span className="fs-12 fw-semibold text-muted mb-1">ตั้งแต่วันที่:</span>
+                                            <ThaiDatePicker
                                                 value={startDate}
-                                                onChange={(e) => setStartDate(e.target.value)}
+                                                onChange={(val) => setStartDate(val)}
+                                                showThaiDatePreview={false}
+                                                placeholder="วว/ดด/ปปปป (พ.ศ.)"
                                             />
                                         </div>
                                     </Col>
                                     <Col xs={12} sm={6} md={3}>
-                                        <div className="input-group input-group-sm shadow-sm">
-                                            <span className="input-group-text bg-light fw-medium">ถึงวันที่</span>
-                                            <input
-                                                type="date"
-                                                className="form-control font-monospace"
+                                        <div className="d-flex flex-column">
+                                            <span className="fs-12 fw-semibold text-muted mb-1">ถึงวันที่:</span>
+                                            <ThaiDatePicker
                                                 value={endDate}
-                                                onChange={(e) => setEndDate(e.target.value)}
+                                                onChange={(val) => setEndDate(val)}
+                                                showThaiDatePreview={false}
+                                                placeholder="วว/ดด/ปปปป (พ.ศ.)"
                                             />
                                         </div>
                                     </Col>
                                 </>
                             )}
+
 
                             {hasDepartment && (
                                 <Col xs={12} sm={6} md={3}>

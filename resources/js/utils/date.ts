@@ -42,3 +42,45 @@ export const timeSince = (date: Date) => {
 
     return `${interval} ${intervalType} ago`;
 };
+
+export const formatThaiDate = (dateStr?: string | null | Date): string => {
+    if (!dateStr) return '-';
+    if (typeof dateStr === 'string') {
+        const cleanDate = dateStr.split('T')[0].split(' ')[0];
+        const parts = cleanDate.split('-');
+        if (parts.length === 3) {
+            const year = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10);
+            const day = parseInt(parts[2], 10);
+            if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+                const thaiMonths = [
+                    'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+                    'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
+                ];
+                const thaiYear = year > 2400 ? year : year + 543;
+                const monthName = thaiMonths[month - 1] || '';
+                return `${day} ${monthName} ${thaiYear}`;
+            }
+        }
+    }
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return String(dateStr);
+    return d.toLocaleDateString('th-TH', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+    });
+};
+
+export const formatThaiDateTime = (dateStr?: string | null | Date): string => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return String(dateStr);
+    const dateFormatted = formatThaiDate(dateStr);
+    const timeFormatted = d.toLocaleTimeString('th-TH', {
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+    return `${dateFormatted} ${timeFormatted} น.`;
+};
+

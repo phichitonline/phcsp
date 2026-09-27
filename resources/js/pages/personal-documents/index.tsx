@@ -1,6 +1,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { useForm, router, Link } from '@inertiajs/react';
 import { Card, CardBody, Col, Row, Button, Form, Badge, Table, InputGroup, ProgressBar, Modal, Collapse } from 'react-bootstrap';
+import Select from 'react-select';
 import MainLayout from '@/layouts/MainLayout';
 import PageTitle from '@/components/PageTitle';
 import IconifyIcon from '@/components/wrappers/IconifyIcon';
@@ -150,6 +151,22 @@ const PersonalDocumentsPage = ({
         required: false,
         thesis_category_id: null,
     });
+
+    const categoryFilterOptions = useMemo(() => [
+        { value: 'all', label: `ทุกหมวดหมู่วิทยานิพนธ์ (${thesis_categories?.length || 10} หมวด)` },
+        ...(thesis_categories || []).map((cat) => ({
+            value: cat.id,
+            label: `หมวด ${cat.category_no}: ${cat.name}`,
+        })),
+    ], [thesis_categories]);
+
+    const thesisCategorySelectOptions = useMemo(() => [
+        { value: '', label: '-- ไม่ระบุหมวดหมู่วิทยานิพนธ์ --' },
+        ...(thesis_categories || []).map((cat) => ({
+            value: cat.id,
+            label: `หมวด ${cat.category_no}: ${cat.name}${cat.item_reference ? ` (${cat.item_reference})` : ''}`,
+        })),
+    ], [thesis_categories]);
 
     const isViewingOtherStudent = is_admin && target_user && auth_user && target_user.id !== auth_user.id;
     const defaultUploaderName = isViewingOtherStudent ? (target_user?.name || '') : (auth_user?.name || '');
@@ -968,20 +985,14 @@ const PersonalDocumentsPage = ({
 
                         {/* Filter Thesis Category */}
                         {thesis_categories && thesis_categories.length > 0 && (
-                            <div style={{ minWidth: 220 }}>
-                                <Form.Select
-                                    size="sm"
-                                    value={selectedCategory}
-                                    onChange={(e) => setSelectedCategory(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                                    className="border"
-                                >
-                                    <option value="all">ทุกหมวดหมู่วิทยานิพนธ์ (10 หมวด)</option>
-                                    {thesis_categories.map((cat) => (
-                                        <option key={cat.id} value={cat.id}>
-                                            หมวด {cat.category_no}: {cat.name}
-                                        </option>
-                                    ))}
-                                </Form.Select>
+                            <div style={{ minWidth: 260 }}>
+                                <Select
+                                    classNamePrefix="react-select"
+                                    options={categoryFilterOptions}
+                                    value={categoryFilterOptions.find((opt) => opt.value === selectedCategory) || categoryFilterOptions[0]}
+                                    onChange={(opt: any) => setSelectedCategory(opt ? opt.value : 'all')}
+                                    isClearable={false}
+                                />
                             </div>
                         )}
 
@@ -1809,20 +1820,17 @@ const PersonalDocumentsPage = ({
                                         <Form.Label className="fw-semibold text-dark fs-14">
                                             หมวดหมู่วิทยานิพนธ์
                                         </Form.Label>
-                                        <Form.Select
-                                            value={stdFormData.thesis_category_id ?? ''}
-                                            onChange={(e) => setStdFormData({
+                                        <Select
+                                            classNamePrefix="react-select"
+                                            options={thesisCategorySelectOptions}
+                                            value={thesisCategorySelectOptions.find((opt) => opt.value === (stdFormData.thesis_category_id ?? '')) || thesisCategorySelectOptions[0]}
+                                            onChange={(opt: any) => setStdFormData({
                                                 ...stdFormData,
-                                                thesis_category_id: e.target.value ? parseInt(e.target.value) : null
+                                                thesis_category_id: opt && opt.value !== '' ? Number(opt.value) : null,
                                             })}
-                                        >
-                                            <option value="">-- ไม่ระบุหมวดหมู่วิทยานิพนธ์ --</option>
-                                            {thesis_categories.map((cat) => (
-                                                <option key={cat.id} value={cat.id}>
-                                                    หมวด {cat.category_no}: {cat.name} {cat.item_reference ? `(${cat.item_reference})` : ''}
-                                                </option>
-                                            ))}
-                                        </Form.Select>
+                                            menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                            styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                        />
                                         {stdFormData.thesis_category_id && (
                                             (() => {
                                                 const curCat = thesis_categories.find((c) => c.id === stdFormData.thesis_category_id);

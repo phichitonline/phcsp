@@ -71,7 +71,7 @@ export const MENU_ITEMS: MenuItemType[] = [
     },
     {
         key: 'credits_overview',
-        label: 'ภาพรวมหน่วยกิต ป.โท',
+        label: 'ภาพรวมหน่วยกิต',
         icon: 'tabler:chart-bar',
         url: '/credits',
         roles: ['admin', 'teacher'],

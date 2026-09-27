@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import MainLayout from '@/layouts/MainLayout';
 import PageTitle from '@/components/PageTitle';
@@ -16,6 +16,7 @@ import {
     Nav,
     Spinner,
 } from 'react-bootstrap';
+import Select from 'react-select';
 
 interface CourseItem {
     id: number;
@@ -38,6 +39,13 @@ interface StudentItem {
         full_name_th: string;
         major: string | null;
         academic_year: string | null;
+        curriculum_id?: number | null;
+        curriculum?: {
+            id: number;
+            code: string;
+            name: string;
+        } | null;
+        gpa?: number | string | null;
     } | null;
 }
 
@@ -61,12 +69,14 @@ interface Props {
         total_credits: number;
     } | null;
     students: StudentItem[];
+    course_students?: StudentItem[];
     courses: CourseItem[];
+    all_courses?: (CourseItem & { curriculum?: { id: number; code: string; name: string } })[];
     academic_years: string[];
     selected_student_id: number | null;
     selected_course_id: number | null;
     selected_year: string;
-    selected_semester: number;
+    selected_semester: number | string;
     student_grades: { [courseId: number]: GradeRecord };
     course_grades: { [userId: number]: GradeRecord };
     mode: 'by_student' | 'by_course';
@@ -93,7 +103,9 @@ const GRADE_OPTIONS = [
 const GradeEntryPage: React.FC<Props> = ({
     curriculum,
     students,
+    course_students = [],
     courses,
+    all_courses = [],
     academic_years,
     selected_student_id,
     selected_course_id,
@@ -121,7 +133,7 @@ const GradeEntryPage: React.FC<Props> = ({
             const existing = student_grades[c.id];
             initial[c.id] = {
                 grade: existing?.grade || '',
-                academic_year: existing?.academic_year || selected_year,
+                academic_year: existing?.academic_year || (selected_year !== 'all' ? selected_year : '2567'),
                 semester: existing?.semester || c.term_suggested || 1,
                 remark: existing?.remark || '',
             };
@@ -129,10 +141,78 @@ const GradeEntryPage: React.FC<Props> = ({
         return initial;
     });
 
+    // อัปเดตฟอร์มรายวิชาของนักศึกษาทันทีเมื่อ courses หรือ student_grades เปลี่ยน (เช่น เปลี่ยนเลือกนักศึกษา)
+    useEffect(() => {
+        if (selected_student_id) {
+            setStudentId(selected_student_id);
+        }
+        const updated: any = {};
+        courses.forEach((c) => {
+            const existing = student_grades[c.id];
+            updated[c.id] = {
+                grade: existing?.grade || '',
+                academic_year: existing?.academic_year || (selected_year !== 'all' ? selected_year : '2567'),
+                semester: existing?.semester || c.term_suggested || 1,
+                remark: existing?.remark || '',
+            };
+        });
+        setFormStudentGrades(updated);
+    }, [courses, student_grades, selected_student_id, selected_year]);
+
     // State สำหรับโหมดกรอกตามรายวิชา
     const [courseId, setCourseId] = useState<number | ''>(selected_course_id || (courses[0]?.id ?? ''));
-    const [courseYear, setCourseYear] = useState<string>(selected_year);
-    const [courseSemester, setCourseSemester] = useState<number>(selected_semester);
+    const [courseYear, setCourseYear] = useState<string>(String(selected_year));
+    const [courseSemester, setCourseSemester] = useState<string>(String(selected_semester));
+
+    useEffect(() => {
+        setMode(initialMode);
+    }, [initialMode]);
+
+    useEffect(() => {
+        if (selected_course_id) {
+            setCourseId(selected_course_id);
+        }
+        setCourseYear(String(selected_year));
+        setCourseSemester(String(selected_semester));
+    }, [selected_course_id, selected_year, selected_semester]);
+
+    const studentOptions = students.map((s) => {
+        const curCode = s.student_profile?.curriculum?.code;
+        const curName = s.student_profile?.curriculum?.name || s.student_profile?.major;
+        const codeText = s.student_profile?.student_code ? `[${s.student_profile.student_code}] ` : '';
+        const nameText = s.student_profile?.full_name_th || s.name;
+        const yrText = s.student_profile?.academic_year ? ` (ปีเข้า ${s.student_profile.academic_year})` : '';
+        const curText = curCode ? ` • ${curCode}` : curName ? ` • ${curName}` : '';
+        return {
+            value: s.id,
+            label: `${codeText}${nameText}${yrText}${curText}`,
+        };
+    });
+
+    const activeCourseList = (mode === 'by_course' && all_courses && all_courses.length > 0) ? all_courses : courses;
+    const courseOptions = activeCourseList.map((c: any) => {
+        const curCode = c.curriculum?.code ? ` [${c.curriculum.code}]` : '';
+        return {
+            value: c.id,
+            label: `${c.course_code} - ${c.course_name_th}${curCode} (${c.credits} หน่วยกิต)`,
+        };
+    });
+
+    const courseYearOptions = [
+        { value: 'all', label: 'ทุกปีการศึกษาที่ลงทะเบียน' },
+        ...academic_years.map((yr) => ({
+            value: String(yr),
+            label: `ปีการศึกษา ${yr}`,
+        })),
+    ];
+
+    const courseSemesterOptions = [
+        { value: 'all', label: 'ทุกภาคเรียน' },
+        { value: '1', label: 'ภาคเรียนที่ 1' },
+        { value: '2', label: 'ภาคเรียนที่ 2' },
+        { value: '3', label: 'ภาคฤดูร้อน' },
+    ];
+
     const [formCourseGrades, setFormCourseGrades] = useState<{
         [userId: number]: {
             grade: string;
@@ -140,7 +220,7 @@ const GradeEntryPage: React.FC<Props> = ({
         };
     }>(() => {
         const initial: any = {};
-        students.forEach((s) => {
+        (course_students || []).forEach((s) => {
             const existing = course_grades[s.id];
             initial[s.id] = {
                 grade: existing?.grade || '',
@@ -149,6 +229,19 @@ const GradeEntryPage: React.FC<Props> = ({
         });
         return initial;
     });
+
+    // อัปเดตฟอร์มเกรดตามรายวิชาเมื่อ course_students หรือ course_grades เปลี่ยน
+    useEffect(() => {
+        const initial: any = {};
+        (course_students || []).forEach((s) => {
+            const existing = course_grades[s.id];
+            initial[s.id] = {
+                grade: existing?.grade || '',
+                remark: existing?.remark || '',
+            };
+        });
+        setFormCourseGrades(initial);
+    }, [course_students, course_grades]);
 
     // เมื่อเปลี่ยนเลือกนักศึกษาในโหมดรายบุคคล
     const handleStudentChange = (newStudentId: number) => {
@@ -161,29 +254,16 @@ const GradeEntryPage: React.FC<Props> = ({
             },
             {
                 preserveScroll: true,
-                onSuccess: (page) => {
-                    const loadedGrades: any = page.props.student_grades || {};
-                    const newForm: any = {};
-                    courses.forEach((c) => {
-                        const existing = loadedGrades[c.id];
-                        newForm[c.id] = {
-                            grade: existing?.grade || '',
-                            academic_year: existing?.academic_year || selected_year,
-                            semester: existing?.semester || c.term_suggested || 1,
-                            remark: existing?.remark || '',
-                        };
-                    });
-                    setFormStudentGrades(newForm);
-                },
+                preserveState: true,
             }
         );
     };
 
     // เมื่อเปลี่ยนวิชาในโหมดตามวิชา
-    const handleCourseOrTermChange = (newCourseId: number, year: string, sem: number) => {
+    const handleCourseOrTermChange = (newCourseId: number, year: string, sem: string | number) => {
         setCourseId(newCourseId);
-        setCourseYear(year);
-        setCourseSemester(sem);
+        setCourseYear(String(year));
+        setCourseSemester(String(sem));
 
         router.get(
             '/credits/entry',
@@ -195,18 +275,7 @@ const GradeEntryPage: React.FC<Props> = ({
             },
             {
                 preserveScroll: true,
-                onSuccess: (page) => {
-                    const loadedGrades: any = page.props.course_grades || {};
-                    const newForm: any = {};
-                    students.forEach((s) => {
-                        const existing = loadedGrades[s.id];
-                        newForm[s.id] = {
-                            grade: existing?.grade || '',
-                            remark: existing?.remark || '',
-                        };
-                    });
-                    setFormCourseGrades(newForm);
-                },
+                preserveState: true,
             }
         );
     };
@@ -304,7 +373,7 @@ const GradeEntryPage: React.FC<Props> = ({
 
     return (
         <MainLayout>
-            <Head title="กรอกผลการเรียน / เกรด - ปริญญาโท วสส.สุพรรณบุรี" />
+            <Head title="กรอกผลการเรียน / เกรด - ปริญญาโท" />
             <PageTitle title="กรอกและจัดการผลการเรียน" subTitle="ระบบบันทึกหน่วยกิตและผลการเรียน ปริญญาโท วสส.สุพรรณบุรี" />
 
             {/* Top Navigation */}
@@ -321,7 +390,14 @@ const GradeEntryPage: React.FC<Props> = ({
                     <Nav.Item>
                         <Nav.Link
                             active={mode === 'by_student'}
-                            onClick={() => setMode('by_student')}
+                            onClick={() => {
+                                setMode('by_student');
+                                router.get(
+                                    '/credits/entry',
+                                    { mode: 'by_student', student_id: studentId },
+                                    { preserveScroll: true, preserveState: true }
+                                );
+                            }}
                             className="rounded-pill px-3 py-1 fs-13 fw-semibold cursor-pointer"
                         >
                             <IconifyIcon icon="tabler:user" className="me-1" />
@@ -331,7 +407,19 @@ const GradeEntryPage: React.FC<Props> = ({
                     <Nav.Item>
                         <Nav.Link
                             active={mode === 'by_course'}
-                            onClick={() => setMode('by_course')}
+                            onClick={() => {
+                                setMode('by_course');
+                                router.get(
+                                    '/credits/entry',
+                                    {
+                                        mode: 'by_course',
+                                        course_id: courseId,
+                                        academic_year: courseYear,
+                                        semester: courseSemester,
+                                    },
+                                    { preserveScroll: true, preserveState: true }
+                                );
+                            }}
                             className="rounded-pill px-3 py-1 fs-13 fw-semibold cursor-pointer"
                         >
                             <IconifyIcon icon="tabler:books" className="me-1" />
@@ -355,25 +443,25 @@ const GradeEntryPage: React.FC<Props> = ({
                                         <Form.Label className="fw-semibold text-dark fs-13 mb-1">
                                             เลือกนักศึกษาที่ต้องการกรอกผลการเรียน
                                         </Form.Label>
-                                        <Form.Select
-                                            value={studentId}
-                                            onChange={(e) => handleStudentChange(Number(e.target.value))}
-                                            className="fw-bold"
-                                        >
-                                            {students.map((s) => (
-                                                <option key={s.id} value={s.id}>
-                                                    {s.student_profile?.student_code ? `[${s.student_profile.student_code}] ` : ''}
-                                                    {s.student_profile?.full_name_th || s.name}
-                                                    {s.student_profile?.academic_year ? ` (ปีเข้า ${s.student_profile.academic_year})` : ''}
-                                                </option>
-                                            ))}
-                                        </Form.Select>
+                                        <Select
+                                            classNamePrefix="react-select"
+                                            options={studentOptions}
+                                            value={studentOptions.find((opt) => opt.value === Number(studentId))}
+                                            onChange={(opt: any) => opt && handleStudentChange(opt.value)}
+                                            placeholder="ค้นหาชื่อหรือรหัสนักศึกษา..."
+                                            isClearable={false}
+                                        />
                                     </Form.Group>
                                 </Col>
 
                                 <Col md={6} className="text-md-end">
                                     {currentSelectedStudent && (
                                         <div className="d-flex align-items-center justify-content-md-end gap-2 flex-wrap">
+                                            {curriculum && (
+                                                <Badge bg="primary-subtle" className="text-primary border border-primary-subtle fs-12 px-2 py-1">
+                                                    หลักสูตร: {curriculum.code} ({curriculum.total_credits} หน่วยกิต)
+                                                </Badge>
+                                            )}
                                             <span className="text-muted fs-13">
                                                 GPA ปัจจุบัน: <strong>{currentSelectedStudent.student_profile?.gpa ? Number(currentSelectedStudent.student_profile.gpa).toFixed(2) : '-'}</strong>
                                             </span>
@@ -398,9 +486,14 @@ const GradeEntryPage: React.FC<Props> = ({
                             <div className="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
                                 <div className="d-flex align-items-center gap-2">
                                     <IconifyIcon icon="tabler:certificate" className="text-primary fs-20" />
-                                    <h5 className="mb-0 fw-bold text-dark fs-16">
-                                        รายวิชาตามหลักสูตร ({courses.length} วิชา)
-                                    </h5>
+                                    <div>
+                                        <h5 className="mb-0 fw-bold text-dark fs-16">
+                                            รายวิชาตามหลักสูตร {curriculum ? `(${curriculum.name})` : ''}
+                                        </h5>
+                                        <small className="text-muted">
+                                            ดึงตามโครงสร้างหลักสูตรและรายวิชาที่ลงทะเบียน {courses.length} วิชา
+                                        </small>
+                                    </div>
                                 </div>
                                 <div>
                                     <Button variant="primary" type="submit" disabled={isSaving} className="d-inline-flex align-items-center gap-1 shadow-sm px-4">
@@ -592,17 +685,14 @@ const GradeEntryPage: React.FC<Props> = ({
                                         <Form.Label className="fw-semibold text-dark fs-13 mb-1">
                                             เลือกรายวิชาที่ต้องการกรอกเกรด
                                         </Form.Label>
-                                        <Form.Select
-                                            value={courseId}
-                                            onChange={(e) => handleCourseOrTermChange(Number(e.target.value), courseYear, courseSemester)}
-                                            className="fw-bold"
-                                        >
-                                            {courses.map((c) => (
-                                                <option key={c.id} value={c.id}>
-                                                    {c.course_code} - {c.course_name_th} ({c.credits} หน่วยกิต)
-                                                </option>
-                                            ))}
-                                        </Form.Select>
+                                        <Select
+                                            classNamePrefix="react-select"
+                                            options={courseOptions}
+                                            value={courseOptions.find((opt) => opt.value === Number(courseId))}
+                                            onChange={(opt: any) => opt && handleCourseOrTermChange(opt.value, courseYear, courseSemester)}
+                                            placeholder="ค้นหารหัสวิชาหรือชื่อวิชา..."
+                                            isClearable={false}
+                                        />
                                     </Form.Group>
                                 </Col>
 
@@ -611,14 +701,13 @@ const GradeEntryPage: React.FC<Props> = ({
                                         <Form.Label className="fw-semibold text-dark fs-13 mb-1">
                                             ปีการศึกษาที่ลงทะเบียน
                                         </Form.Label>
-                                        <Form.Select
-                                            value={courseYear}
-                                            onChange={(e) => handleCourseOrTermChange(Number(courseId), e.target.value, courseSemester)}
-                                        >
-                                            {academic_years.map((yr) => (
-                                                <option key={yr} value={yr}>ปีการศึกษา {yr}</option>
-                                            ))}
-                                        </Form.Select>
+                                        <Select
+                                            classNamePrefix="react-select"
+                                            options={courseYearOptions}
+                                            value={courseYearOptions.find((opt) => String(opt.value) === String(courseYear))}
+                                            onChange={(opt: any) => opt && handleCourseOrTermChange(Number(courseId), opt.value, courseSemester)}
+                                            isClearable={false}
+                                        />
                                     </Form.Group>
                                 </Col>
 
@@ -627,20 +716,19 @@ const GradeEntryPage: React.FC<Props> = ({
                                         <Form.Label className="fw-semibold text-dark fs-13 mb-1">
                                             ภาคเรียน
                                         </Form.Label>
-                                        <Form.Select
-                                            value={courseSemester}
-                                            onChange={(e) => handleCourseOrTermChange(Number(courseId), courseYear, Number(e.target.value))}
-                                        >
-                                            <option value="1">ภาคเรียนที่ 1</option>
-                                            <option value="2">ภาคเรียนที่ 2</option>
-                                            <option value="3">ภาคฤดูร้อน</option>
-                                        </Form.Select>
+                                        <Select
+                                            classNamePrefix="react-select"
+                                            options={courseSemesterOptions}
+                                            value={courseSemesterOptions.find((opt) => String(opt.value) === String(courseSemester))}
+                                            onChange={(opt: any) => opt && handleCourseOrTermChange(Number(courseId), courseYear, opt.value)}
+                                            isClearable={false}
+                                        />
                                     </Form.Group>
                                 </Col>
 
                                 <Col lg={2} className="text-lg-end">
                                     <Badge bg="primary-subtle" className="text-primary border border-primary-subtle fs-12 p-2 w-100 text-center">
-                                        นักศึกษา {students.length} คน
+                                        ลงทะเบียน {course_students.length} คน
                                     </Badge>
                                 </Col>
                             </Row>
@@ -656,11 +744,13 @@ const GradeEntryPage: React.FC<Props> = ({
                                         กรอกผลการเรียนวิชา {currentSelectedCourse?.course_code} - {currentSelectedCourse?.course_name_th}
                                     </h5>
                                     <small className="text-muted">
-                                        ประจำภาคเรียนที่ {courseSemester} ปีการศึกษา {courseYear} (จำนวน {currentSelectedCourse?.credits} หน่วยกิต)
+                                        {courseSemester === 'all' ? 'ทุกภาคเรียน' : `ภาคเรียนที่ ${courseSemester}`} {' '}
+                                        {courseYear === 'all' ? 'ทุกปีการศึกษาที่ลงทะเบียน' : `ปีการศึกษา ${courseYear}`} {' '}
+                                        (จำนวน {currentSelectedCourse?.credits} หน่วยกิต)
                                     </small>
                                 </div>
                                 <div>
-                                    <Button variant="primary" type="submit" disabled={isSaving} className="d-inline-flex align-items-center gap-1 shadow-sm px-4">
+                                    <Button variant="primary" type="submit" disabled={isSaving || course_students.length === 0} className="d-inline-flex align-items-center gap-1 shadow-sm px-4">
                                         {isSaving ? (
                                             <>
                                                 <Spinner animation="border" size="sm" />
@@ -682,81 +772,109 @@ const GradeEntryPage: React.FC<Props> = ({
                                         <thead className="bg-light-subtle text-muted text-uppercase fs-12">
                                             <tr>
                                                 <th style={{ width: 60 }} className="text-center">#</th>
-                                                <th style={{ width: 140 }}>รหัสนักศึกษา</th>
+                                                <th style={{ width: 130 }}>รหัสนักศึกษา</th>
                                                 <th style={{ minWidth: 200 }}>ชื่อ-นามสกุล</th>
-                                                <th style={{ width: 140 }}>สาขาวิชา / ปีเข้า</th>
-                                                <th style={{ width: 220 }}>ผลการเรียน (เกรด)</th>
-                                                <th style={{ minWidth: 200 }}>หมายเหตุ</th>
+                                                <th style={{ width: 160 }}>หลักสูตร / สาขาวิชา</th>
+                                                <th style={{ width: 130 }} className="text-center">ภาคที่ลงทะเบียน</th>
+                                                <th style={{ width: 200 }}>ผลการเรียน (เกรด)</th>
+                                                <th style={{ minWidth: 180 }}>หมายเหตุ</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {students.map((student, idx) => {
-                                                const profile = student.student_profile;
-                                                const rowData = formCourseGrades[student.id] || { grade: '', remark: '' };
+                                            {course_students.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={7} className="text-center py-5 text-muted">
+                                                        <div className="d-flex flex-column align-items-center justify-content-center">
+                                                            <IconifyIcon icon="tabler:user-off" className="fs-36 text-secondary mb-2" />
+                                                            <p className="mb-1 fw-semibold fs-14">ไม่พบนักศึกษาที่ลงทะเบียนเรียนในรายวิชานี้</p>
+                                                            <small className="text-muted">
+                                                                {courseYear !== 'all' || courseSemester !== 'all'
+                                                                    ? 'ลองเลือก "ทุกปีการศึกษาที่ลงทะเบียน" หรือ "ทุกภาคเรียน" เพื่อค้นหาประวัติการลงทะเบียนทั้งหมด'
+                                                                    : 'ยังไม่มีนักศึกษาในระบบลงทะเบียนเรียนในรายวิชานี้'}
+                                                            </small>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                course_students.map((student, idx) => {
+                                                    const profile = student.student_profile;
+                                                    const rowData = formCourseGrades[student.id] || { grade: '', remark: '' };
+                                                    const regGrade = course_grades[student.id];
 
-                                                return (
-                                                    <tr key={student.id} className={rowData.grade ? 'table-primary-subtle' : ''}>
-                                                        <td className="text-center text-muted fw-semibold">
-                                                            {idx + 1}
-                                                        </td>
-                                                        <td className="fw-bold text-primary fs-13">
-                                                            {profile?.student_code || '-'}
-                                                        </td>
-                                                        <td className="fw-medium text-dark fs-13">
-                                                            {profile?.full_name_th || student.name}
-                                                        </td>
-                                                        <td className="fs-12 text-muted">
-                                                            {profile?.major || '-'} {profile?.academic_year ? `(${profile.academic_year})` : ''}
-                                                        </td>
-                                                        <td>
-                                                            <Form.Select
-                                                                size="sm"
-                                                                value={rowData.grade}
-                                                                className={`fw-bold ${rowData.grade ? 'border-primary text-primary' : ''}`}
-                                                                onChange={(e) => {
-                                                                    setFormCourseGrades({
-                                                                        ...formCourseGrades,
-                                                                        [student.id]: {
-                                                                            ...rowData,
-                                                                            grade: e.target.value,
-                                                                        },
-                                                                    });
-                                                                }}
-                                                            >
-                                                                {GRADE_OPTIONS.map((opt) => (
-                                                                    <option key={opt.value} value={opt.value}>
-                                                                        {opt.label}
-                                                                    </option>
-                                                                ))}
-                                                            </Form.Select>
-                                                        </td>
-                                                        <td>
-                                                            <Form.Control
-                                                                size="sm"
-                                                                type="text"
-                                                                placeholder="หมายเหตุเพิ่มเติม..."
-                                                                value={rowData.remark}
-                                                                onChange={(e) => {
-                                                                    setFormCourseGrades({
-                                                                        ...formCourseGrades,
-                                                                        [student.id]: {
-                                                                            ...rowData,
-                                                                            remark: e.target.value,
-                                                                        },
-                                                                    });
-                                                                }}
-                                                            />
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
+                                                    return (
+                                                        <tr key={student.id} className={rowData.grade ? 'table-primary-subtle' : ''}>
+                                                            <td className="text-center text-muted fw-semibold">
+                                                                {idx + 1}
+                                                            </td>
+                                                            <td className="fw-bold text-primary fs-13">
+                                                                {profile?.student_code || '-'}
+                                                            </td>
+                                                            <td className="fw-medium text-dark fs-13">
+                                                                {profile?.full_name_th || student.name}
+                                                            </td>
+                                                            <td className="fs-12 text-muted">
+                                                                <div className="fw-semibold text-dark">{profile?.curriculum?.code || profile?.major || '-'}</div>
+                                                                <small className="text-muted">{profile?.academic_year ? `(ปีเข้า ${profile.academic_year})` : ''}</small>
+                                                            </td>
+                                                            <td className="text-center fs-12">
+                                                                {regGrade ? (
+                                                                    <Badge bg="light" className="text-dark border">
+                                                                        ภาค {regGrade.semester}/{regGrade.academic_year}
+                                                                    </Badge>
+                                                                ) : (
+                                                                    <span className="text-muted">-</span>
+                                                                )}
+                                                            </td>
+                                                            <td>
+                                                                <Form.Select
+                                                                    size="sm"
+                                                                    value={rowData.grade}
+                                                                    className={`fw-bold ${rowData.grade ? 'border-primary text-primary' : ''}`}
+                                                                    onChange={(e) => {
+                                                                        setFormCourseGrades({
+                                                                            ...formCourseGrades,
+                                                                            [student.id]: {
+                                                                                ...rowData,
+                                                                                grade: e.target.value,
+                                                                            },
+                                                                        });
+                                                                    }}
+                                                                >
+                                                                    {GRADE_OPTIONS.map((opt) => (
+                                                                        <option key={opt.value} value={opt.value}>
+                                                                            {opt.label}
+                                                                        </option>
+                                                                    ))}
+                                                                </Form.Select>
+                                                            </td>
+                                                            <td>
+                                                                <Form.Control
+                                                                    size="sm"
+                                                                    type="text"
+                                                                    placeholder="หมายเหตุเพิ่มเติม..."
+                                                                    value={rowData.remark}
+                                                                    onChange={(e) => {
+                                                                        setFormCourseGrades({
+                                                                            ...formCourseGrades,
+                                                                            [student.id]: {
+                                                                                ...rowData,
+                                                                                remark: e.target.value,
+                                                                            },
+                                                                        });
+                                                                    }}
+                                                                />
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })
+                                            )}
                                         </tbody>
                                     </Table>
                                 </div>
                             </CardBody>
 
                             <div className="card-footer bg-light-subtle py-3 border-top text-end">
-                                <Button variant="primary" type="submit" disabled={isSaving} className="px-4 shadow-sm">
+                                <Button variant="primary" type="submit" disabled={isSaving || course_students.length === 0} className="px-4 shadow-sm">
                                     <IconifyIcon icon="tabler:device-floppy" className="me-1 fs-18" />
                                     บันทึกเกรดทั้งรุ่น
                                 </Button>

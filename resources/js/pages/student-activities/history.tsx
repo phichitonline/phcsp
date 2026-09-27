@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { Card, CardBody, Col, Row, Button, Badge, Table, Form } from 'react-bootstrap';
+import Select from 'react-select';
 import MainLayout from '@/layouts/MainLayout';
 import PageTitle from '@/components/PageTitle';
 import IconifyIcon from '@/components/wrappers/IconifyIcon';
@@ -56,6 +57,11 @@ export default function StudentActivityHistory({
     });
 
     const years = Object.keys(hoursByYear).sort((a, b) => Number(b) - Number(a));
+
+    const yearOptions = [
+        { value: '', label: 'ปีการศึกษาทั้งหมด' },
+        ...years.map((y) => ({ value: y, label: `ปีการศึกษา ${y}` })),
+    ];
 
     return (
         <MainLayout>
@@ -114,16 +120,15 @@ export default function StudentActivityHistory({
                 <CardBody className="p-3 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div className="d-flex align-items-center gap-2">
                         <span className="fw-semibold text-dark fs-14">ตัวกรอง:</span>
-                        <Form.Select
-                            value={selectedYear}
-                            onChange={(e) => setSelectedYear(e.target.value)}
-                            style={{ width: 180 }}
-                        >
-                            <option value="">ปีการศึกษาทั้งหมด</option>
-                            {years.map((y) => (
-                                <option key={y} value={y}>ปีการศึกษา {y}</option>
-                            ))}
-                        </Form.Select>
+                        <div style={{ width: 220 }}>
+                            <Select
+                                classNamePrefix="react-select"
+                                options={yearOptions}
+                                value={yearOptions.find((opt) => opt.value === selectedYear) || yearOptions[0]}
+                                onChange={(opt: any) => setSelectedYear(opt ? opt.value : '')}
+                                isClearable={false}
+                            />
+                        </div>
                     </div>
 
                     <span className="text-muted fs-13">

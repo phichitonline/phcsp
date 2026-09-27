@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Head, Link, useForm, router } from '@inertiajs/react';
 import { Card, CardBody, Col, Row, Button, Form, Badge, Modal, InputGroup, Table, Dropdown } from 'react-bootstrap';
+import Select from 'react-select';
 import MainLayout from '@/layouts/MainLayout';
 import PageTitle from '@/components/PageTitle';
 import IconifyIcon from '@/components/wrappers/IconifyIcon';
 import Swal from 'sweetalert2';
 import LocationMapPickerModal from '@/components/LocationMapPickerModal';
+import ThaiDatePicker from '@/components/ThaiDatePicker';
 
 interface ActivityItem {
     id: number;
@@ -73,7 +75,55 @@ export default function ActivitiesIndex({ activities, filters, stats, academicYe
     const [selectedSemester, setSelectedSemester] = useState(filters.semester || '');
     const [selectedType, setSelectedType] = useState(filters.activity_type || '');
 
-    const { data, setData, post, processing, errors, reset } = useForm({
+    // Select2 Options
+    const yearFilterOptions = [
+        { value: '', label: 'ปีการศึกษาทั้งหมด' },
+        ...academicYears.map((y) => ({ value: String(y), label: `ปีการศึกษา ${y}` })),
+    ];
+
+    const semesterFilterOptions = [
+        { value: '', label: 'ภาคเรียนทั้งหมด' },
+        { value: '1', label: 'ภาคเรียนที่ 1' },
+        { value: '2', label: 'ภาคเรียนที่ 2' },
+        { value: '3', label: 'ภาคฤดูร้อน' },
+    ];
+
+    const typeFilterOptions = [
+        { value: '', label: 'ประเภททั้งหมด' },
+        { value: 'mandatory', label: 'กิจกรรมหลัก / บังคับ' },
+        { value: 'elective', label: 'กิจกรรมเลือก / สมัครใจ' },
+    ];
+
+    const modalYearOptions = (academicYears.length > 0 ? academicYears : [2568, 2569, 2570, 2571]).map((y) => ({
+        value: y,
+        label: `ปีการศึกษา ${y}`,
+    }));
+
+    const modalSemesterOptions = [
+        { value: 1, label: 'ภาคเรียนที่ 1' },
+        { value: 2, label: 'ภาคเรียนที่ 2' },
+        { value: 3, label: 'ภาคฤดูร้อน' },
+    ];
+
+    const modalTypeOptions = [
+        { value: 'mandatory', label: 'กิจกรรมหลัก / บังคับ' },
+        { value: 'elective', label: 'กิจกรรมเลือก / สมัครใจ' },
+    ];
+
+    const qrIntervalOptions = [
+        { value: 15, label: '15 วินาที (ป้องกันการแชร์สูงสุด)' },
+        { value: 30, label: '30 วินาที (เร็ว)' },
+        { value: 45, label: '45 วินาที' },
+        { value: 60, label: '60 วินาที (มาตรฐาน - แนะนำ)' },
+        { value: 90, label: '90 วินาที (1 นาทีครึ่ง)' },
+        { value: 120, label: '120 วินาที (2 นาที)' },
+        { value: 180, label: '180 วินาที (3 นาที)' },
+        { value: 300, label: '300 วินาที (5 นาที - จอใหญ่)' },
+    ];
+
+    const [editingActivity, setEditingActivity] = useState<ActivityItem | null>(null);
+
+    const { data, setData, post, put, processing, errors, reset } = useForm({
         activity_name: '',
         activity_code: '',
         academic_year: 2569,
@@ -94,6 +144,59 @@ export default function ActivitiesIndex({ activities, filters, stats, academicYe
         target_type: 'ALL',
         target_value: '',
     });
+
+    const handleOpenCreate = () => {
+        setEditingActivity(null);
+        reset();
+        setData({
+            activity_name: '',
+            activity_code: '',
+            academic_year: 2569,
+            semester: 1,
+            activity_type: 'mandatory',
+            activity_date: new Date().toISOString().split('T')[0],
+            start_time: '08:30',
+            end_time: '16:30',
+            total_hours: 8.0,
+            location_name: 'วิทยาลัยการสาธารณสุขสิรินธร จังหวัดสุพรรณบุรี',
+            latitude: 14.475685,
+            longitude: 100.116528,
+            radius_limit: 100,
+            qr_refresh_interval: 60,
+            status: 'published',
+            max_participants: '',
+            description: '',
+            target_type: 'ALL',
+            target_value: '',
+        });
+        setShowCreateModal(true);
+    };
+
+    const handleOpenEdit = (act: ActivityItem) => {
+        setEditingActivity(act);
+        setData({
+            activity_name: act.activity_name,
+            activity_code: act.activity_code || '',
+            academic_year: act.academic_year,
+            semester: act.semester,
+            activity_type: act.activity_type,
+            activity_date: act.activity_date ? act.activity_date.substring(0, 10) : '',
+            start_time: act.start_time ? act.start_time.substring(0, 5) : '08:30',
+            end_time: act.end_time ? act.end_time.substring(0, 5) : '16:30',
+            total_hours: act.total_hours,
+            location_name: act.location_name || '',
+            latitude: act.latitude || 14.475685,
+            longitude: act.longitude || 100.116528,
+            radius_limit: act.radius_limit || 100,
+            qr_refresh_interval: act.qr_refresh_interval || 60,
+            status: act.status || 'published',
+            max_participants: act.max_participants ? String(act.max_participants) : '',
+            description: act.description || '',
+            target_type: 'ALL',
+            target_value: '',
+        });
+        setShowCreateModal(true);
+    };
 
     const handleFilter = () => {
         router.get(
@@ -151,20 +254,52 @@ export default function ActivitiesIndex({ activities, filters, stats, academicYe
 
     const handleSubmitCreate = (e: React.FormEvent) => {
         e.preventDefault();
-        post('/activities', {
-            onSuccess: () => {
-                setShowCreateModal(false);
-                reset();
-                Swal.fire({
-                    icon: 'success',
-                    title: 'สร้างกิจกรรมสำเร็จ',
-                    text: 'กิจกรรมถูกบันทึกและพร้อมเปิดให้นักศึกษาเช็กอินแล้ว',
-                    timer: 2000,
-                    showConfirmButton: false,
-                });
-            },
-        });
+        if (editingActivity) {
+            put(`/activities/${editingActivity.id}`, {
+                onSuccess: () => {
+                    setShowCreateModal(false);
+                    setEditingActivity(null);
+                    reset();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'บันทึกสำเร็จ',
+                        text: 'แก้ไขชื่อและรายละเอียดของกิจกรรมเรียบร้อยแล้ว',
+                        timer: 2000,
+                        showConfirmButton: false,
+                    });
+                },
+                onError: (err) => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ไม่สามารถบันทึกได้',
+                        text: Object.values(err)[0] as string || 'กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง',
+                    });
+                },
+            });
+        } else {
+            post('/activities', {
+                onSuccess: () => {
+                    setShowCreateModal(false);
+                    reset();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'สร้างกิจกรรมสำเร็จ',
+                        text: 'กิจกรรมถูกบันทึกและพร้อมเปิดให้นักศึกษาเช็กอินแล้ว',
+                        timer: 2000,
+                        showConfirmButton: false,
+                    });
+                },
+                onError: (err) => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ไม่สามารถบันทึกได้',
+                        text: Object.values(err)[0] as string || 'กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง',
+                    });
+                },
+            });
+        }
     };
+
 
     const handleDelete = (activity: ActivityItem) => {
         if (activity.attended_count > 0) {
@@ -301,29 +436,36 @@ export default function ActivitiesIndex({ activities, filters, stats, academicYe
                         </Col>
 
                         <Col lg={2} sm={4}>
-                            <Form.Select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
-                                <option value="">ปีการศึกษาทั้งหมด</option>
-                                {academicYears.map((y) => (
-                                    <option key={y} value={y}>ปีการศึกษา {y}</option>
-                                ))}
-                            </Form.Select>
+                            <Select
+                                classNamePrefix="react-select"
+                                options={yearFilterOptions}
+                                value={yearFilterOptions.find((opt) => opt.value === String(selectedYear)) || yearFilterOptions[0]}
+                                onChange={(opt: any) => setSelectedYear(opt ? opt.value : '')}
+                                placeholder="ปีการศึกษา..."
+                                isClearable={false}
+                            />
                         </Col>
 
                         <Col lg={2} sm={4}>
-                            <Form.Select value={selectedSemester} onChange={(e) => setSelectedSemester(e.target.value)}>
-                                <option value="">ภาคเรียนทั้งหมด</option>
-                                <option value="1">ภาคเรียนที่ 1</option>
-                                <option value="2">ภาคเรียนที่ 2</option>
-                                <option value="3">ภาคฤดูร้อน</option>
-                            </Form.Select>
+                            <Select
+                                classNamePrefix="react-select"
+                                options={semesterFilterOptions}
+                                value={semesterFilterOptions.find((opt) => opt.value === String(selectedSemester)) || semesterFilterOptions[0]}
+                                onChange={(opt: any) => setSelectedSemester(opt ? opt.value : '')}
+                                placeholder="ภาคเรียน..."
+                                isClearable={false}
+                            />
                         </Col>
 
                         <Col lg={2} sm={4}>
-                            <Form.Select value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
-                                <option value="">ประเภททั้งหมด</option>
-                                <option value="mandatory">กิจกรรมหลัก / บังคับ</option>
-                                <option value="elective">กิจกรรมเลือก / สมัครใจ</option>
-                            </Form.Select>
+                            <Select
+                                classNamePrefix="react-select"
+                                options={typeFilterOptions}
+                                value={typeFilterOptions.find((opt) => opt.value === selectedType) || typeFilterOptions[0]}
+                                onChange={(opt: any) => setSelectedType(opt ? opt.value : '')}
+                                placeholder="ประเภทกิจกรรม..."
+                                isClearable={false}
+                            />
                         </Col>
 
                         <Col lg={2} className="d-flex gap-2">
@@ -335,7 +477,7 @@ export default function ActivitiesIndex({ activities, filters, stats, academicYe
                                     <IconifyIcon icon="tabler:reload" />
                                 </Button>
                             )}
-                            <Button variant="success" className="d-flex align-items-center justify-content-center gap-1 text-nowrap" onClick={() => setShowCreateModal(true)}>
+                            <Button variant="success" className="d-flex align-items-center justify-content-center gap-1 text-nowrap" onClick={handleOpenCreate}>
                                 <IconifyIcon icon="tabler:plus" /> สร้างกิจกรรม
                             </Button>
                         </Col>
@@ -357,7 +499,7 @@ export default function ActivitiesIndex({ activities, filters, stats, academicYe
                                     <th className="text-center">จำนวนชั่วโมง</th>
                                     <th>สถานที่ / รัศมี GPS</th>
                                     <th className="text-center">ยอดเช็กอิน</th>
-                                    <th className="text-center" style={{ width: '180px' }}>จัดการ</th>
+                                    <th className="text-center" style={{ width: '220px' }}>จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -366,11 +508,12 @@ export default function ActivitiesIndex({ activities, filters, stats, academicYe
                                         <td colSpan={8} className="text-center py-5 text-muted">
                                             <IconifyIcon icon="tabler:calendar-off" className="fs-48 text-secondary mb-2" />
                                             <div>ยังไม่มีข้อมูลกิจกรรมที่ตรงกับเงื่อนไขการค้นหา</div>
-                                            <Button variant="outline-primary" size="sm" className="mt-2" onClick={() => setShowCreateModal(true)}>
+                                            <Button variant="outline-primary" size="sm" className="mt-2" onClick={handleOpenCreate}>
                                                 สร้างกิจกรรมใหม่
                                             </Button>
                                         </td>
                                     </tr>
+
                                 ) : (
                                     activities.data.map((act) => {
                                         const checkinPercent = act.registrations_count > 0
@@ -440,6 +583,15 @@ export default function ActivitiesIndex({ activities, filters, stats, academicYe
                                                 </td>
                                                 <td className="text-center">
                                                     <div className="d-flex justify-content-center gap-1">
+                                                        <Button
+                                                            variant="soft-warning"
+                                                            size="sm"
+                                                            onClick={() => handleOpenEdit(act)}
+                                                            title="แก้ไขชื่อและรายละเอียดกิจกรรม"
+                                                        >
+                                                            <IconifyIcon icon="tabler:edit" /> แก้ไข
+                                                        </Button>
+
                                                         <Link
                                                             href={`/activities/${act.id}`}
                                                             className="btn btn-sm btn-soft-primary"
@@ -505,8 +657,11 @@ export default function ActivitiesIndex({ activities, filters, stats, academicYe
                 <Form onSubmit={handleSubmitCreate}>
                     <Modal.Header closeButton className="bg-light">
                         <Modal.Title className="fs-16 d-flex align-items-center gap-2">
-                            <IconifyIcon icon="tabler:calendar-plus" className="text-primary fs-20" />
-                            เพิ่มกิจกรรมนักศึกษาใหม่
+                            <IconifyIcon
+                                icon={editingActivity ? 'tabler:edit' : 'tabler:calendar-plus'}
+                                className={`${editingActivity ? 'text-warning' : 'text-primary'} fs-20`}
+                            />
+                            {editingActivity ? 'แก้ไขชื่อและรายละเอียดกิจกรรม' : 'เพิ่มกิจกรรมนักศึกษาใหม่'}
                         </Modal.Title>
                     </Modal.Header>
                     <Modal.Body className="p-4">
@@ -542,11 +697,13 @@ export default function ActivitiesIndex({ activities, filters, stats, academicYe
                             <Col md={4}>
                                 <Form.Group>
                                     <Form.Label className="fw-semibold">ปีการศึกษา <span className="text-danger">*</span></Form.Label>
-                                    <Form.Control
-                                        type="number"
-                                        value={data.academic_year}
-                                        onChange={(e) => setData('academic_year', parseInt(e.target.value))}
-                                        required
+                                    <Select
+                                        classNamePrefix="react-select"
+                                        options={modalYearOptions}
+                                        value={modalYearOptions.find((opt) => opt.value === data.academic_year) || { value: data.academic_year, label: `ปีการศึกษา ${data.academic_year}` }}
+                                        onChange={(opt: any) => setData('academic_year', opt ? opt.value : 2569)}
+                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
                                     />
                                 </Form.Group>
                             </Col>
@@ -554,38 +711,38 @@ export default function ActivitiesIndex({ activities, filters, stats, academicYe
                             <Col md={4}>
                                 <Form.Group>
                                     <Form.Label className="fw-semibold">ภาคเรียน <span className="text-danger">*</span></Form.Label>
-                                    <Form.Select
-                                        value={data.semester}
-                                        onChange={(e) => setData('semester', parseInt(e.target.value))}
-                                    >
-                                        <option value={1}>ภาคเรียนที่ 1</option>
-                                        <option value={2}>ภาคเรียนที่ 2</option>
-                                        <option value={3}>ภาคฤดูร้อน</option>
-                                    </Form.Select>
+                                    <Select
+                                        classNamePrefix="react-select"
+                                        options={modalSemesterOptions}
+                                        value={modalSemesterOptions.find((opt) => opt.value === data.semester)}
+                                        onChange={(opt: any) => setData('semester', opt ? opt.value : 1)}
+                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                    />
                                 </Form.Group>
                             </Col>
 
                             <Col md={4}>
                                 <Form.Group>
                                     <Form.Label className="fw-semibold">ประเภทกิจกรรม <span className="text-danger">*</span></Form.Label>
-                                    <Form.Select
-                                        value={data.activity_type}
-                                        onChange={(e) => setData('activity_type', e.target.value as any)}
-                                    >
-                                        <option value="mandatory">กิจกรรมหลัก / บังคับ</option>
-                                        <option value="elective">กิจกรรมเลือก / สมัครใจ</option>
-                                    </Form.Select>
+                                    <Select
+                                        classNamePrefix="react-select"
+                                        options={modalTypeOptions}
+                                        value={modalTypeOptions.find((opt) => opt.value === data.activity_type)}
+                                        onChange={(opt: any) => setData('activity_type', (opt ? opt.value : 'mandatory') as any)}
+                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                    />
                                 </Form.Group>
                             </Col>
 
                             <Col md={4}>
                                 <Form.Group>
                                     <Form.Label className="fw-semibold">วันที่จัดกิจกรรม <span className="text-danger">*</span></Form.Label>
-                                    <Form.Control
-                                        type="date"
+                                    <ThaiDatePicker
                                         value={data.activity_date}
-                                        onChange={(e) => setData('activity_date', e.target.value)}
-                                        required
+                                        onChange={(val) => setData('activity_date', val)}
+                                        placeholder="วว/ดด/ปปปป (พ.ศ.)"
                                     />
                                 </Form.Group>
                             </Col>
@@ -648,19 +805,14 @@ export default function ActivitiesIndex({ activities, filters, stats, academicYe
                                     <Form.Label className="fw-semibold d-flex align-items-center gap-1">
                                         <IconifyIcon icon="tabler:clock-bolt" className="text-warning" /> รอบเปลี่ยน QR Code
                                     </Form.Label>
-                                    <Form.Select
-                                        value={data.qr_refresh_interval}
-                                        onChange={(e) => setData('qr_refresh_interval', parseInt(e.target.value))}
-                                    >
-                                        <option value={15}>15 วินาที (ป้องกันการแชร์สูงสุด)</option>
-                                        <option value={30}>30 วินาที (เร็ว)</option>
-                                        <option value={45}>45 วินาที</option>
-                                        <option value={60}>60 วินาที (มาตรฐาน - แนะนำ)</option>
-                                        <option value={90}>90 วินาที (1 นาทีครึ่ง)</option>
-                                        <option value={120}>120 วินาที (2 นาที)</option>
-                                        <option value={180}>180 วินาที (3 นาที)</option>
-                                        <option value={300}>300 วินาที (5 นาที - จอใหญ่)</option>
-                                    </Form.Select>
+                                    <Select
+                                        classNamePrefix="react-select"
+                                        options={qrIntervalOptions}
+                                        value={qrIntervalOptions.find((opt) => opt.value === data.qr_refresh_interval) || qrIntervalOptions[3]}
+                                        onChange={(opt: any) => setData('qr_refresh_interval', opt ? opt.value : 60)}
+                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                                    />
                                 </Form.Group>
                             </Col>
 
@@ -765,8 +917,16 @@ export default function ActivitiesIndex({ activities, filters, stats, academicYe
                         <Button variant="secondary" onClick={() => setShowCreateModal(false)}>
                             ยกเลิก
                         </Button>
-                        <Button variant="success" type="submit" disabled={processing} className="d-flex align-items-center gap-1">
-                            <IconifyIcon icon="tabler:check" /> บันทึกและเปิดกิจกรรม
+                        <Button
+                            variant={editingActivity ? 'warning' : 'success'}
+                            type="submit"
+                            disabled={processing}
+                            className={`d-flex align-items-center gap-1 ${editingActivity ? 'text-dark fw-semibold' : ''}`}
+                        >
+                            <IconifyIcon icon="tabler:check" />
+                            {editingActivity
+                                ? (processing ? 'กำลังบันทึก...' : 'บันทึกการแก้ไขกิจกรรม')
+                                : (processing ? 'กำลังบันทึก...' : 'บันทึกและเปิดกิจกรรม')}
                         </Button>
                     </Modal.Footer>
                 </Form>

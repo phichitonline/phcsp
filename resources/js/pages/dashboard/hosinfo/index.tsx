@@ -1,11 +1,11 @@
-import small1Img from '@/images/small/small-22.jpg';
-import small4Img from '@/images/small/small-21.jpg';
 import MainLayout from '@/layouts/MainLayout';
 import { Head, Link, usePage } from '@inertiajs/react';
 import IconifyIcon from '@/components/wrappers/IconifyIcon';
 import { useState } from 'react';
-import { Col, Row, Card, CardBody, CardTitle } from 'react-bootstrap';
+import { Col, Row } from 'react-bootstrap';
 import WebboardSection from './components/WebboardSection';
+import UpcomingActivitiesSection, { ActivityItem } from './components/UpcomingActivitiesSection';
+import CurriculumsSection, { CurriculumItem } from './components/CurriculumsSection';
 
 const IconLink = ({ 
     icon, 
@@ -18,8 +18,8 @@ const IconLink = ({
     icon: string; 
     title: string; 
     subtitle: string; 
-    href: string;
-    color: string;
+    href: string; 
+    color: string; 
     hasExternalIcon?: boolean;
 }) => {
     const [isHovered, setIsHovered] = useState(false);
@@ -46,7 +46,7 @@ const IconLink = ({
                 style={{ 
                     width: '64px', 
                     height: '64px', 
-                    borderRadius: '16px',
+                    borderRadius: '16px', 
                     backgroundColor: color,
                     flexShrink: 0
                 }}
@@ -66,20 +66,26 @@ const IconLink = ({
     );
 };
 
-
 const HosinfoDashboardPage = () => {
-    const { hospital, stats, statsTitle, webboardPosts } = usePage().props as any;
+    const { 
+        hospital, 
+        webboardPosts, 
+        upcomingActivities = [], 
+        upcomingActivitiesCount, 
+        curriculums = [], 
+        activeCurriculumsCount 
+    } = usePage().props as any;
 
     return (
         <MainLayout>
             <Head title={'หน้าหลัก'} />
 
+            {/* Page Header */}
             <Row className="mt-3 mb-3">
                 <Col xs={12}>
                     <div className="page-title-box d-flex align-items-center justify-content-between flex-wrap gap-2">
                         <div className="d-flex align-items-center">
                             <h4 className="page-title mb-0 me-2 text-dark fw-bold fs-24">{hospital?.name || 'Demo'}</h4>
-
                         </div>
                         <div className="d-flex align-items-center text-muted fw-medium fs-14 bg-white px-3 py-2 rounded-pill shadow-sm border">
                             <IconifyIcon icon="solar:calendar-bold-duotone" className="me-2 text-primary fs-18" />
@@ -96,7 +102,8 @@ const HosinfoDashboardPage = () => {
                 </Col>
             </Row>
 
-            <Row className="mb-3">
+            {/* Quick Links */}
+            <Row className="mb-4">
                 <Col xs={12}>
                     <div className="d-flex flex-column flex-lg-row gap-3 justify-content-center align-items-center w-100">
                         <IconLink 
@@ -125,7 +132,27 @@ const HosinfoDashboardPage = () => {
                 </Col>
             </Row>
 
-            {/* กระดานข่าวถามตอบ & แจ้งปัญหา (Q&A Webboard) */}
+            {/* 1. ส่วนกิจกรรมที่กำลังจะเกิดขึ้น (Upcoming Activities) */}
+            <Row className="mb-2">
+                <Col xs={12}>
+                    <UpcomingActivitiesSection 
+                        activities={upcomingActivities as ActivityItem[]} 
+                        totalCount={upcomingActivitiesCount}
+                    />
+                </Col>
+            </Row>
+
+            {/* 2. ส่วนแนะนำหลักสูตรที่เปิดเรียนทั้งหมด (Curriculums Showcase) */}
+            <Row className="mb-2">
+                <Col xs={12}>
+                    <CurriculumsSection 
+                        curriculums={curriculums as CurriculumItem[]} 
+                        activeCount={activeCurriculumsCount}
+                    />
+                </Col>
+            </Row>
+
+            {/* 3. กระดานข่าวถามตอบ & แจ้งปัญหา (Q&A Webboard) */}
             <Row className="mt-0 mb-0">
                 <Col xs={12}>
                     <WebboardSection posts={webboardPosts || []} />
