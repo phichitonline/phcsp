@@ -30,8 +30,8 @@ class ThaiDAuthController extends Controller
         try {
             $thaidUser = Socialite::driver('thaid')->user();
         } catch (\Exception $e) {
-            dd($e->getMessage(), $e->getTraceAsString());
-            //return redirect('/auth/login')->withErrors(['error' => 'การเข้าสู่ระบบด้วย ThaiD ล้มเหลว กรุณาลองใหม่อีกครั้ง']);
+            //dd($e->getMessage(), $e->getTraceAsString());
+            return redirect('/auth/login')->withErrors(['error' => 'การเข้าสู่ระบบด้วย ThaiD ล้มเหลว กรุณาลองใหม่อีกครั้ง']);
         }
 
         // Find existing user by ThaiD ID
